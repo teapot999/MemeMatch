@@ -1,7 +1,7 @@
 import flask as fl
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
-import forms
+import forms.user
 from data import db_session
 from data.users import User
 
@@ -11,15 +11,26 @@ app.config['SECRET_KEY'] = open('secret_key.txt').read().strip()
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return fl.render_template('404.html', title='Пофиг, потеряли')
+    return fl.render_template('404.html', title='Пофиг, потеряли'), 404
+
+
+@app.route('/user_avatar/<int:user_id>')
+def user_avatar(user_id):
+    db_sess = db_session.create_session()
+    db_sess.close()
+    user = db_sess.query(User).get(user_id)
+
+    if not user or not user.picture:
+        return app.send_static_file('img/default_avatar.jpg')
+
+    response = fl.make_response(user.picture)
+    response.headers.set('Content-Type', 'image/jpeg')
+    return response
 
 
 @app.route('/')
 def index():
-    name = 'Анонимус'
-    if current_user.is_authenticated:
-        name = current_user.name
-    return fl.render_template('index.html', name=name)
+    return fl.render_template('index.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -29,20 +40,27 @@ def register():
         if form.password.data != form.password_again.data:
             return fl.render_template('register.html', title='Регистрация',
                                       form=form,
-                                      message="Пароли не совпадают")
+                                      message="Пароли не совпадают, не будем советовать Ctrl+C / Ctrl+V")
+        if len(form.nickname.data) > 50:
+            return fl.render_template('register.html', title='Регистрация',
+                                      form=form,
+                                      message='Слишком длинный ник, сократи до 50 символов')
         db_sess = db_session.create_session()
         if db_sess.query(User).filter(User.username == form.username.data).first():
             return fl.render_template('register.html', title='Регистрация',
                                       form=form,
                                       message="Такой пользователь уже есть")
+
         user = User(
             name=form.nickname.data,
             username=form.username.data,
-            about=form.about.data
+            about=form.about.data,
+            picture=form.picture.data.read()
         )
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
+        db_sess.close()
         login_user(user, remember=form.remember_me.data)
         return fl.redirect('/')
     return fl.render_template('register.html', title='Регистрация', form=form)
@@ -54,6 +72,7 @@ def login():
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         user = db_sess.query(User).filter(User.username == form.username.data).first()
+        db_sess.close()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
             return fl.redirect("/")
@@ -79,7 +98,9 @@ def main():
     @login_manager.user_loader
     def load_user(user_id):
         db_sess = db_session.create_session()
-        return db_sess.get(User, user_id)
+        user = db_sess.get(User, user_id)
+        db_sess.close()
+        return user
 
     app.run()
 

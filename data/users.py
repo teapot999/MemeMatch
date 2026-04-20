@@ -17,7 +17,7 @@ class User(SqlAlchemyBase, UserMixin):
     username = sa.Column(sa.String, index=True, unique=True, nullable=True)
     hashed_password = sa.Column(sa.String, nullable=True)
     created_date = sa.Column(sa.DateTime, default=datetime.now)
-    picture = sa.Column(sa.BLOB, nullable=True)
+    picture = sa.Column(sa.String, nullable=True)
 
     news = orm.relationship("Meme", back_populates='user')
 

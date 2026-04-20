@@ -23,6 +23,7 @@
 <!--        </button>-->
         <div class="d-flex align-items-center">
         {% if current_user.is_authenticated %}
+            <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar in-feed">
             <a class="navbar-brand" href="/profile">{{ current_user.name }}</a>
             <a class="btn btn-danger" href="/logout">Выйти</a>
         {% else %}

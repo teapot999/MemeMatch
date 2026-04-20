@@ -2,8 +2,16 @@ img {
     margin-left: auto;
     margin-right: auto;
     display: block;
-    padding-top: 10px;
-    border-radius: 15px;
+}
+
+.avatar {
+    max-width: 52px;
+    max-height: 52px;
+    border-radius: 26px;
+}
+
+.avatar.in-feed {
+    margin-right: 10px;
 }
 
 .memefeed {
