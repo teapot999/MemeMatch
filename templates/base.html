@@ -21,6 +21,17 @@
 <!--                aria-controls="navbarNav" aria-expanded="false" aria-label="Переключатель навигации">-->
 <!--            <span class="navbar-toggler-icon"></span>-->
 <!--        </button>-->
+        <div class="d-flex align-items-center">
+        {% if current_user.is_authenticated %}
+            <a class="navbar-brand" href="/profile">{{ current_user.name }}</a>
+            <a class="btn btn-danger" href="/logout">Выйти</a>
+        {% else %}
+            <p>
+                <a class="btn btn-primary" href="/register">Зарегистрироваться</a>
+                <a class="btn btn-success" href="/login">Войти</a>
+            </p>
+        {% endif %}
+        </div>
     </nav>
 </header>
 <!-- Begin page content -->
