@@ -4,13 +4,10 @@ img {
     display: block;
 }
 
-.avatar {
+.avatar-little {
     max-width: 52px;
     max-height: 52px;
     border-radius: 26px;
-}
-
-.avatar.in-feed {
     margin-right: 10px;
 }
 

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import flask as fl
 from flask_login import LoginManager, login_user, logout_user, login_required
 
@@ -7,6 +9,7 @@ from data.users import User
 
 app = fl.Flask(__name__)
 app.config['SECRET_KEY'] = open('secret_key.txt').read().strip()
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
 
 
 @app.errorhandler(404)
@@ -18,7 +21,7 @@ def page_not_found(e):
 def user_avatar(user_id):
     db_sess = db_session.create_session()
     db_sess.close()
-    user = db_sess.query(User).get(user_id)
+    user = db_sess.get(User, user_id)
 
     if not user or not user.picture:
         return app.send_static_file('img/default_avatar.jpg')
@@ -37,14 +40,6 @@ def index():
 def register():
     form = forms.user.RegisterForm()
     if form.validate_on_submit():
-        if form.password.data != form.password_again.data:
-            return fl.render_template('register.html', title='Регистрация',
-                                      form=form,
-                                      message="Пароли не совпадают, не будем советовать Ctrl+C / Ctrl+V")
-        if len(form.nickname.data) > 50:
-            return fl.render_template('register.html', title='Регистрация',
-                                      form=form,
-                                      message='Слишком длинный ник, сократи до 50 символов')
         db_sess = db_session.create_session()
         if db_sess.query(User).filter(User.username == form.username.data).first():
             return fl.render_template('register.html', title='Регистрация',
@@ -60,8 +55,8 @@ def register():
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
-        db_sess.close()
         login_user(user, remember=form.remember_me.data)
+        db_sess.close()
         return fl.redirect('/')
     return fl.render_template('register.html', title='Регистрация', form=form)
 

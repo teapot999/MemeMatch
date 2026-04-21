@@ -6,7 +6,14 @@
     {{ form.hidden_tag() }}
     <p>
         {{ form.username.label }}<br>
-        {{ form.username(class="form-control") }}<br>
+        {{ form.username(
+            class="form-control",
+            pattern="^[a-zA-Z0-9][a-zA-Z0-9_~]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+            minlength="5",
+            maxlength="32",
+            title="Имя пользователя может состоять из латиницы и символов _ ~, но не по краям. Состоит из 5 символов, не меньше, и из 32, не больше"
+        )
+        }}<br>
         {% for error in form.username.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}
@@ -15,7 +22,7 @@
     </p>
     <p>
         {{ form.password.label }}<br>
-        {{ form.password(class="form-control", type="password") }}<br>
+        {{ form.password(class="form-control", type="password", id="pass") }}<br>
         {% for error in form.password.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}
@@ -24,7 +31,7 @@
     </p>
     <p>
         {{ form.password_again.label }}<br>
-        {{ form.password_again(class="form-control", type="password") }}<br>
+        {{ form.password_again(class="form-control", type="password", oninput="this.setCustomValidity(this.value != document.getElementById('pass').value ? 'Пароли не совпадают' : '')") }}<br>
         {% for error in form.password_again.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}
@@ -33,7 +40,7 @@
     </p>
     <p>
         {{ form.nickname.label }}<br>
-        {{ form.nickname(class="form-control") }}<br>
+        {{ form.nickname(class="form-control", maxlength="50") }}<br>
         {% for error in form.nickname.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}
@@ -42,7 +49,7 @@
     </p>
     <p>
         {{ form.about.label }}<br>
-        {{ form.about(class="form-control") }}<br>
+        {{ form.about(class="form-control", maxlength="512") }}<br>
         {% for error in form.about.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}

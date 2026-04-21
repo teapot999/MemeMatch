@@ -1,16 +1,26 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed
 from wtforms import PasswordField, StringField, TextAreaField, SubmitField, BooleanField, FileField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms.validators import DataRequired, ValidationError, Length, Regexp, EqualTo
 
 
 class RegisterForm(FlaskForm):
-    username = StringField('Имя пользователя', validators=[DataRequired()])
-    password = PasswordField('Пароль', validators=[DataRequired()])
-    password_again = PasswordField('Повторите пароль', validators=[DataRequired()])
-    nickname = StringField('Никнейм', validators=[DataRequired()])
+    username = StringField('Имя пользователя', validators=[
+        DataRequired(),
+        Length(min=5, max=32),
+        Regexp('^[A-Za-z0-9][A-Za-z0-9_~]*[A-Za-z0-9]$')
+    ])
+    password = PasswordField('Пароль', validators=[
+        DataRequired()])
+    password_again = PasswordField('Повторите пароль', validators=[
+        DataRequired(),
+        EqualTo('password')])
+    nickname = StringField('Никнейм', validators=[
+        DataRequired(message='Имени не может не быть')])
     about = TextAreaField('Немного о себе')
-    picture = FileField('Загрузить пикчу', validators=[FileAllowed(['png', 'jpg', 'jpeg'])])
+    picture = FileField('Загрузить пикчу', validators=[
+        FileAllowed(['png', 'jpg', 'jpeg'], message='Не вижу картинки с форматом JPEG, JPG или PNG')
+    ])
     remember_me = BooleanField('Выпить таблетку от деменции')
     submit = SubmitField('Зарегистрироваться')
 
