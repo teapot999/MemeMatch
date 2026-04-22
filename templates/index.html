@@ -2,11 +2,6 @@
 
 {% block content %}
 <div class="memefeed">
-    {% if current_user.is_authenticated %}
-        {% set name = current_user.name %}
-    {% else %}
-        {% set name = "Анонимус" %}
-    {% endif %}
-    <h1>Привет, {{ name }}!</h1>
+    <h1>Привет, {% if current_user.is_authenticated %}{{ current_user.name }}{% else %}Анонимус{% endif %}!</h1>
 </div>
 {% endblock %}

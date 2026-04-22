@@ -8,19 +8,13 @@
           integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
           crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="../static/css/style.css"/>
-    {% if not title %}
-    {% set title = "MemeMatch" %}
-    {% endif %}
-    <title>{{title}}</title>
+    <title>MemeMatch{% if title %}: {{ title }}{% endif %}</title>
 </head>
 <body>
 <header>
     <nav class="navbar navbar-light bg-light">
         <a class="navbar-brand" href="/">MemeMatch</a>
-<!--        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"-->
-<!--                aria-controls="navbarNav" aria-expanded="false" aria-label="Переключатель навигации">-->
-<!--            <span class="navbar-toggler-icon"></span>-->
-<!--        </button>-->
+        <a class="navbar-brand" href="">{% if title %}{{ title }}{% else %}Главная{% endif %}</a>
         <div class="d-flex align-items-center">
         {% if current_user.is_authenticated %}
             <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little">
