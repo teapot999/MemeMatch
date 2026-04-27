@@ -38,3 +38,19 @@ class LoginForm(FlaskForm):
     password = PasswordField('Пароль', validators=[DataRequired()])
     remember_me = BooleanField('Выпить таблетку от деменции')
     submit = SubmitField('Войти')
+
+
+class EditProfileForm(FlaskForm):
+    username = StringField('Имя пользователя', validators=[
+        Length(max=32),
+        Regexp('^[A-Za-z0-9][A-Za-z0-9_~]*[A-Za-z0-9]$|$')
+    ])
+    password = PasswordField('Пароль')
+    password_again = PasswordField('Повторите пароль', validators=[
+        EqualTo('password')])
+    nickname = StringField('Никнейм')
+    about = TextAreaField('Немного о себе')
+    picture = FileField('Загрузить пикчу', validators=[
+        FileAllowed(['png', 'jpg', 'jpeg'], message='Не вижу картинки с форматом JPEG, JPG или PNG')
+    ])
+    submit = SubmitField('Подтвердить')

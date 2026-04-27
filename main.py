@@ -1,20 +1,22 @@
 from datetime import timedelta
 
-import flask as fl
-from flask_login import LoginManager, login_user, logout_user, login_required
+from flask import Flask, make_response, render_template, redirect
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
 import forms.user
 from data import db_session
+from data.memes import Meme
 from data.users import User
 
-app = fl.Flask(__name__)
+app = Flask(__name__)
 app.config['SECRET_KEY'] = open('secret_key.txt').read().strip()
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+app.json.ensure_ascii = False
 
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return fl.render_template('404.html', title='Пофиг, потеряли'), 404
+    return render_template('404.html', title='Пофиг, потеряли'), 404
 
 
 @app.route('/user_avatar/<int:user_id>')
@@ -26,14 +28,25 @@ def user_avatar(user_id):
     if not user or not user.picture:
         return app.send_static_file('img/default_avatar.jpg')
 
-    response = fl.make_response(user.picture)
+    response = make_response(user.picture)
+    response.headers.set('Content-Type', 'image/jpeg')
+    return response
+
+
+@app.route('/user_memes/<int:user_id>/')
+def user_memes(user_id, meme_id):
+    db_sess = db_session.create_session()
+    meme = db_sess.query(Meme).filter(Meme.id == meme_id, Meme.user_id == user_id).first()
+    db_sess.close()
+
+    response = make_response(meme.picture)
     response.headers.set('Content-Type', 'image/jpeg')
     return response
 
 
 @app.route('/')
 def index():
-    return fl.render_template('index.html')
+    return render_template('index.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -42,9 +55,9 @@ def register():
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         if db_sess.query(User).filter(User.username == form.username.data).first():
-            return fl.render_template('register.html', title='Регистрация',
-                                      form=form,
-                                      message="Такой пользователь уже есть")
+            return render_template('register.html', title='Регистрация',
+                                   form=form,
+                                   message="Пользователь с таким юзернеймом уже есть уже есть")
 
         user = User(
             name=form.nickname.data,
@@ -57,8 +70,8 @@ def register():
         db_sess.commit()
         login_user(user, remember=form.remember_me.data)
         db_sess.close()
-        return fl.redirect('/')
-    return fl.render_template('register.html', title='Регистрация', form=form)
+        return redirect('/')
+    return render_template('register.html', title='Регистрация', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -70,18 +83,48 @@ def login():
         db_sess.close()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
-            return fl.redirect("/")
-        return fl.render_template('login.html',
-                                  message="Неправильный логин или пароль",
-                                  form=form)
-    return fl.render_template('login.html', title='Авторизация', form=form)
+            return redirect("/")
+        return render_template('login.html',
+                               message="Неправильный логин или пароль",
+                               form=form)
+    return render_template('login.html', title='Авторизация', form=form)
+
+
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html', title='Профиль')
+
+
+@app.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = forms.user.EditProfileForm()
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        if db_sess.query(User).filter(User.username == form.username.data).first():
+            return render_template('edit_profile.html', title='Регистрация',
+                                   form=form,
+                                   message="Этот юзернейм занят")
+
+        current_user.username = form.username.data or current_user.username
+        current_user.about = form.about.data or current_user.about
+        current_user.nickname = form.nickname.data or current_user.nickname
+        current_user.picture = form.picture.data.read() or current_user.picture
+
+        db_sess.merge(current_user)
+
+        db_sess.commit()
+        db_sess.close()
+        return redirect('/profile')
+    return render_template('edit_profile.html', title='Редактирование профиля', form=form)
 
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    return fl.redirect("/")
+    return redirect("/")
 
 
 def main():

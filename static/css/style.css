@@ -8,11 +8,23 @@ main {
     margin-top: 10px;
 }
 
+.avatar-big {
+    width: 208px;
+    height: 208px;
+    border-radius: 104px;
+    border-width: 1px;
+    border-color: black;
+    border-style: solid;
+    margin-bottom: 10px;
+}
+
 .avatar-little {
     width: 52px;
     height: 52px;
     border-radius: 26px;
-    margin-right: 10px;
+    border-width: 1px;
+    border-color: black;
+    border-style: solid;
 }
 
 .memefeed {

@@ -14,11 +14,11 @@
 <header>
     <nav class="navbar navbar-light bg-light">
         <a class="navbar-brand" href="/">MemeMatch</a>
-        <a class="navbar-brand" href="">{% if title %}{{ title }}{% else %}Главная{% endif %}</a>
+        <a class="navbar-brand" href="" style="margin-left: 5%">{% if title %}{{ title }}{% else %}Главная{% endif %}</a>
         <div class="d-flex align-items-center">
         {% if current_user.is_authenticated %}
-            <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little">
-            <a class="navbar-brand" href="/profile">{{ current_user.name }}</a>
+            <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little" style="margin-right: 10px">
+            <a class="navbar-brand" href="/profile">{{ current_user.nickname }}</a>
             <a class="btn btn-danger" href="/logout">Выйти</a>
         {% else %}
             <p>
@@ -35,3 +35,5 @@
 </main>
 </body>
 </html>
+
+{% block scripts %}{% endblock %}
