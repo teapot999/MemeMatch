@@ -5,12 +5,14 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 
 import forms.user
 from data import db_session
-from data.memes import Meme
 from data.users import User
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = open('secret_key.txt').read().strip()
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=60)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=60)
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = True
 app.json.ensure_ascii = False
 
 
@@ -29,17 +31,6 @@ def user_avatar(user_id):
         return app.send_static_file('img/default_avatar.jpg')
 
     response = make_response(user.picture)
-    response.headers.set('Content-Type', 'image/jpeg')
-    return response
-
-
-@app.route('/user_memes/<int:user_id>/')
-def user_memes(user_id, meme_id):
-    db_sess = db_session.create_session()
-    meme = db_sess.query(Meme).filter(Meme.id == meme_id, Meme.user_id == user_id).first()
-    db_sess.close()
-
-    response = make_response(meme.picture)
     response.headers.set('Content-Type', 'image/jpeg')
     return response
 
