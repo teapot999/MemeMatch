@@ -51,7 +51,7 @@ def register():
                                    message="Пользователь с таким юзернеймом уже есть уже есть")
 
         user = User(
-            name=form.nickname.data,
+            nickname=form.nickname.data,
             username=form.username.data,
             about=form.about.data,
             picture=form.picture.data.read()
