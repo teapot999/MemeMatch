@@ -1,7 +1,67 @@
 {% extends "base.html" %}
 
+{% set auth = current_user.is_authenticated %}
+
 {% block content %}
 <div class="memefeed">
-    <h1>Привет, {% if current_user.is_authenticated %}{{ current_user.nickname }}{% else %}Анонимус{% endif %}!</h1>
+    <h1>Привет, {% if auth %}{{ current_user.nickname }}{% else %}Анонимус{% endif %}!</h1>
+    <hr>
+    {% for meme in memes %}
+        <div class="border meme-card">
+            {% set user = meme.user %}
+            <div class="memeheader">
+                <div class="from-user">
+                    <img src="{{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-little">
+                    <a href="profile/{{ user.id }}" class="nickname text-secondary">{{ user.nickname }}</a>
+                </div>
+                <div class="title">
+                    <p class="heading-text">{{ meme.title }}</p>
+                </div>
+            </div>
+            <div class="memebody">
+                <div class="control-buttons">
+                    {% if auth and user.id == current_user.id %}
+                        <a class="btn btn-warning">📝</a>
+                        <a class="btn btn-danger">🗑️</a>
+                    {% endif %}
+                    <a class="btn btn-outline-warning">⏬</a>
+                </div>
+                <div class="border meme">
+                    <img src="{{ url_for('get_meme', meme_id=meme.id) }}" alt="">
+                    {% if meme.description %}
+                    <p class="text-secondary">{{ meme.description }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="control-buttons">
+                    <a class="btn btn-outline-danger">❤️</a>
+                    <a class="btn btn-success">🔀</a>
+                </div>
+            </div>
+            <div class="memefooter">
+                <div class="memestat">
+                    <div class="stat-item">
+                        <p>Лайки</p>
+                    </div>
+                    <div class="stat-item">
+                        <p>Мэтчи</p>
+                    </div>
+                </div>
+                <div class="create-date">
+                    <div class="stat-item">
+                        <p>{{ meme.created_date }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br>
+    {% endfor %}
+    <hr>
+    <h3>Мемы закончились =(</h3>
+    {% if auth %}
+        <a class="btn btn-light">Создать новый мем</a>
+    {% endif %}
+    <hr>
+    ~MemeMatch~
 </div>
 {% endblock %}

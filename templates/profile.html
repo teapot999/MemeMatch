@@ -3,18 +3,20 @@
 {% block content %}
 <div class="container memefeed">
     <div class="container">
-        <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-big">
-        <h2 class="heading-text">{{ current_user.nickname }}</h2>
-        <p class="text-secondary">{{current_user.about }}</p>
-        <a class="btn btn-light" href="profile/edit">Изменить</a>
+        <img src="{{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-big">
+        <h2 class="heading-text">{{ user.nickname }}</h2>
+        <p class="text-secondary">{{user.about }}</p>
+        {% if is_owner %}
+            <a class="btn btn-light" href="../profile/edit">Изменить</a>
+        {% endif %}
     </div>
 <!--    <div class="border rounded" style="margin-top: 20px">-->
 <!--        <h3 class="heading-text">Мои мемы</h3>-->
 <!--        {/% for meme in memes %}-->
 <!--            <div class="border rounded">-->
-<!--                <img src="{/{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little">{/{ meme.user.name }}-->
+<!--                <img src="{/{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-little">{/{ meme.user.name }}-->
 <!--                <p class="heading-text">{/{ meme.title }}</p>-->
-<!--                <img src="{/{ url_for('user_memes', user_id=current_user.id) }}" alt=""> TODO-->
+<!--                <img src="{/{ url_for('user_memes', user_id=user.id) }}" alt=""> TODO-->
 <!--        </div>-->
 <!--    </div>-->
 </div>
