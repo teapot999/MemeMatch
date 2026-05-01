@@ -33,13 +33,6 @@ main {
     text-align: center;
 }
 
-/*.meme-fromuser {*/
-/*    display: flex;*/
-/*    align-items: center;*/
-/*    justify-content: flex-start;*/
-/*    gap: 10px;*/
-/*}*/
-
 .meme-card {
     align-content: center;
     align-items: center;
@@ -97,13 +90,14 @@ main {
 .memebody .control-buttons, .memebody .meme {
     display: flex;
     flex-direction: column;
-    gap: 10px
+    gap: 10px;
+    padding: 5px;
 }
 
 .meme img {
-    max-height: 50%;
-    max-width: 50%;
-    border-radius: 5px;
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
 }
 
 .meme-card .memefooter {
