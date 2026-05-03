@@ -17,8 +17,13 @@ app.config['REMEMBER_COOKIE_SECURE'] = True
 app.json.ensure_ascii = False
 
 
+@app.errorhandler(401)
+def unauthorized(e):
+    return render_template('401.html', title='Кто вы?'), 401
+
+
 @app.errorhandler(404)
-def page_not_found(e):
+def not_found(e):
     return render_template('404.html', title='Пофиг, потеряли'), 404
 
 
@@ -27,7 +32,10 @@ def user_avatar(user_id):
     with db_session.create_session() as db_sess:
         user = db_sess.get(User, user_id)
 
-        if not user or not user.picture:
+        if not user:
+            abort(404)
+
+        if not user.picture:
             return app.send_static_file('img/default_avatar.jpg')
 
         response = make_response(user.picture)
@@ -41,7 +49,7 @@ def get_meme(meme_id):
         meme = db_sess.get(Meme, meme_id)
 
         if not meme or not meme.picture:
-            abort(404, title='Мема нема')
+            abort(404)
 
         response = make_response(meme.picture)
         response.headers.set('Content-Type', 'image/jpeg')

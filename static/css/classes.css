@@ -1,0 +1,45 @@
+.avatar-big {
+    width: 208px;
+    height: 208px;
+    border-radius: 104px;
+    border-width: 1px;
+    border-color: black;
+    border-style: solid;
+    margin-bottom: 10px;
+}
+
+.avatar-little {
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    border-width: 1px;
+    border-color: black;
+    border-style: solid;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 10px;
+    padding: 5px;
+    flex-wrap: nowrap;
+}
+
+.control-buttons.row {
+    flex-direction: row !important;
+}
+
+.control-buttons.column {
+    flex-direction: column !important;
+}
+
+.memefeed {
+    align-content: center;
+    align-items: center;
+    text-align: center;
+}

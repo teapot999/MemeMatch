@@ -2,6 +2,10 @@
 
 {% set auth = current_user.is_authenticated %}
 
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/memefeed.css') }}"/>
+{% endblock %}
+
 {% block content %}
 <div class="memefeed">
     <h1>Привет, {% if auth %}{{ current_user.nickname }}{% else %}Анонимус{% endif %}!</h1>
@@ -19,7 +23,7 @@
                 </div>
             </div>
             <div class="memebody">
-                <div class="control-buttons">
+                <div class="control-buttons column">
                     {% if auth and user.id == current_user.id %}
                         <a class="btn btn-warning">📝</a>
                         <a class="btn btn-danger">🗑️</a>
@@ -32,8 +36,7 @@
                     <p class="text-secondary">{{ meme.description }}</p>
                     {% endif %}
                 </div>
-
-                <div class="control-buttons">
+                <div class="control-buttons row">
                     <a class="btn btn-outline-danger">❤️</a>
                     <a class="btn btn-success">🔀</a>
                 </div>

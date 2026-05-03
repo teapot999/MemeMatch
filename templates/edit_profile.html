@@ -65,23 +65,19 @@
 <script>
 function previewNickname(input) {
     const nickname = document.getElementById("preview-nickname");
-    if (nickname) {
-        if (input.value.trim()) {
-            nickname.textContent = input.value;
-        } else {
-            nickname.textContent = "{{ current_user.nickname }}"
-        }
+    if (input.value.trim()) {
+        nickname.textContent = input.value;
+    } else {
+        nickname.textContent = "{{ current_user.nickname }}"
     }
 }
 
 function previewAbout(input) {
     const about = document.getElementById('preview-about');
-    if (about) {
-        if (input.value.trim()) {
-            about.textContent = input.value;
-        } else {
-            about.textContent = "{{ current_user.about }}"
-        }
+    if (input.value.trim()) {
+        about.textContent = input.value;
+    } else {
+        about.textContent = "{{ current_user.about }}"
     }
 }
 
