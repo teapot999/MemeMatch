@@ -43,3 +43,9 @@
     align-items: center;
     text-align: center;
 }
+
+.meme {
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
+}

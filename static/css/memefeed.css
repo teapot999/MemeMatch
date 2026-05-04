@@ -52,17 +52,11 @@
     place-self: center;
 }
 
-.memebody .meme {
+.memebody .meme-content {
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding: 5px;
-}
-
-.meme img {
-    width: 100%;
-    height: auto;
-    border-radius: 3px;
 }
 
 .meme-card .memefooter {

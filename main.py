@@ -3,6 +3,7 @@ from datetime import timedelta
 from flask import Flask, make_response, render_template, redirect, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
+import forms.meme
 import forms.user
 from data import db_session
 from data.memes import Meme
@@ -17,6 +18,8 @@ app.config['REMEMBER_COOKIE_SECURE'] = True
 app.json.ensure_ascii = False
 
 
+# === Error handlers ===
+
 @app.errorhandler(401)
 def unauthorized(e):
     return render_template('401.html', title='Кто вы?'), 401
@@ -26,6 +29,8 @@ def unauthorized(e):
 def not_found(e):
     return render_template('404.html', title='Пофиг, потеряли'), 404
 
+
+# === In-app API ===
 
 @app.route('/user_avatar/<int:user_id>')
 def user_avatar(user_id):
@@ -43,8 +48,8 @@ def user_avatar(user_id):
         return response
 
 
-@app.route('/get_meme/<int:meme_id>')
-def get_meme(meme_id):
+@app.route('/meme_picture/<int:meme_id>')
+def meme_picture(meme_id):
     with db_session.create_session() as db_sess:
         meme = db_sess.get(Meme, meme_id)
 
@@ -56,12 +61,16 @@ def get_meme(meme_id):
         return response
 
 
+# ====== Pages ======
+
 @app.route('/')
 def index():
     with db_session.create_session() as db_sess:
         memes = db_sess.query(Meme).all()
         return render_template('index.html', memes=memes)
 
+
+# === Register and login ===
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -106,6 +115,15 @@ def login():
     return render_template('login.html', title='Авторизация', form=form)
 
 
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect("/")
+
+
+# === Profile ===
+
 @app.route('/profile')
 @login_required
 def profile():
@@ -116,6 +134,9 @@ def profile():
 def someones_profile(user_id):
     with db_session.create_session() as db_sess:
         user = db_sess.get(User, user_id)
+        if not user:
+            abort(404)
+
         is_owner = current_user.is_authenticated and user_id == current_user.id
 
         return render_template('profile.html', title='Профиль', user=user, is_owner=is_owner)
@@ -146,11 +167,18 @@ def edit_profile():
     return render_template('edit_profile.html', title='Редактирование профиля', form=form)
 
 
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect("/")
+# === Memes ===
+
+@app.route('/meme/create', methods=['GET', 'POST'])
+def create_meme():
+    form = forms.meme.RegisterForm()
+    if form.validate_on_submit():
+        with db_session.create_session() as db_sess:
+            ...
+
+            return redirect('/')
+
+    return render_template('meme_maker.html', title='Создание мема', form=form)
 
 
 def main():

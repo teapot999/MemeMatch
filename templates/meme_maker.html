@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form action="" method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <p>
+        <p>
+            {{ form.picture.label }}<br>
+            {{ form.picture(class="form-control", type="file", onchange="previewMeme(this); makeMemeFromData();") }}<br>
+            {% for error in form.picture.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <img id="meme-source" src="" alt="" style="display: none">
+        <img id="meme-preview" src="" alt="" class="meme" style="width: 50%">
+        <hr>
+        <!--text-->
+        <p>{{ form.text(id="text-toggler", disabled=True, onchange="makeMemeFromData()") }} {{ form.text.label }}</p>
+        <p>
+            {{ form.text_top.label(class="text") }}<br>
+            {{ form.text_top(class="form-control text", id="topText", oninput="makeMemeFromData()") }}
+            {% for error in form.text_top.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.text_bottom.label(class="text") }}<br>
+            {{ form.text_bottom(class="form-control text", id="bottomText", oninput="makeMemeFromData()") }}
+            {% for error in form.text_bottom.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <hr>
+        <!--jackal-->
+        <p>{{ form.jackal(id="jackal-toggler", disabled=True, onchange="makeMemeFromData()") }} {{ form.jackal.label }}</p>
+        <p>
+            {{ form.jackal_degree.label(class="jackal") }}<br>
+            {{ form.jackal_degree(class="form-control jackal", id="jackalDegree", onchange="makeMemeFromData()") }}
+            {% for error in form.jackal_degree.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <hr>
+        <!--demik-->
+        <p>{{ form.demik(id="demik-toggler", disabled=True, onchange="makeMemeFromData()") }} {{ form.demik.label }}</p>
+        <p>
+            {{ form.demik_top_text.label(class="demik") }}<br>
+            {{ form.demik_top_text(class="form-control demik", id="demikTopText", oninput="makeMemeFromData()") }}
+            {% for error in form.demik_top_text.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.demik_bottom_text.label(class="demik") }}<br>
+            {{ form.demik_bottom_text(class="form-control demik", id="demikBottomText", oninput="makeMemeFromData()") }}
+            {% for error in form.demik_bottom_text.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.demik_frame_width.label(class="demik") }}<br>
+            {{ form.demik_frame_width(class="form-control demik", id="demikBorder", onchange="makeMemeFromData()") }}
+            {% for error in form.demik_frame_width.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+        <p>
+            {{ form.demik_outline_width.label(class="demik") }}<br>
+            {{ form.demik_outline_width(class="form-control demik", id="demikOutline", onchange="makeMemeFromData()") }}
+            {% for error in form.demik_outline_width.errors %}
+                <p class="alert alert-danger" role="alert">
+                    {{ error }}
+                </p>
+            {% endfor %}
+        </p>
+    </p>
+    <p>{{form.create(type="submit", class="btn btn-primary") }}</p>
+    {{message}}
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const text_toggler = document.getElementById('text-toggler');
+        const text_elements = document.querySelectorAll('.text');
+
+        function updateState() {
+            const isTextDisabled = !text_toggler.checked;
+
+            text_elements.forEach(elem => {
+                elem.disabled = isTextDisabled;
+                elem.style.opacity = isTextDisabled ? '0.5' : '1';
+            });
+        }
+
+        text_toggler.addEventListener('change', updateState);
+
+        updateState();
+    })
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const jackal_toggler = document.getElementById('jackal-toggler');
+        const jackal_elements = document.querySelectorAll('.jackal');
+
+        function updateState() {
+            const isJackalDisabled = !jackal_toggler.checked;
+            jackal_elements.forEach(elem => {
+                elem.disabled = isJackalDisabled;
+                elem.style.opacity = isJackalDisabled ? '0.5' : '1';
+            });
+        }
+
+        jackal_toggler.addEventListener('change', updateState);
+
+        updateState();
+    })
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const demik_toggler = document.getElementById('demik-toggler');
+        const demik_elements = document.querySelectorAll('.demik');
+
+        function updateState() {
+            const isDemikDisabled = !demik_toggler.checked;
+
+            demik_elements.forEach(elem => {
+                elem.disabled = isDemikDisabled;
+                elem.style.opacity = isDemikDisabled ? '0.5' : '1';
+            })
+        }
+
+        demik_toggler.addEventListener('change', updateState);
+
+        updateState();
+    })
+</script>
+<script src="{{ url_for('static', filename='scripts/meme_maker.js') }}"></script>
+<script>
+    let timeout;
+
+    async function makeMemeFromData() {
+        clearTimeout(timeout);
+
+        timeout = setTimeout(async () => {
+            const imageSource = document.getElementById('meme-source');
+            const imagePreview = document.getElementById('meme-preview');
+            const textType = document.getElementById('text-toggler').checked;
+            const topText = document.getElementById('topText').value.trim();
+            const bottomText = document.getElementById('bottomText').value.trim();
+            const jackalType = document.getElementById('jackal-toggler').checked;
+            const jackalDegree = document.getElementById('jackalDegree').value || 30;
+            const demikType = document.getElementById('demik-toggler').checked;
+            const demikTopText = document.getElementById('demikTopText').value.trim();
+            const demikBottomText = document.getElementById('demikBottomText').value.trim();
+            const demikBorder = document.getElementById('demikBorder').value || 100;
+            const demikOutline = document.getElementById('demikOutline').value || 3;
+
+            let params = {
+                textType, topText, bottomText,
+                jackalType, jackalDegree,
+                demikType, demikTopText, demikBottomText, demikBorder, demikOutline
+            };
+
+            await makeMeme(imageSource, imagePreview, params);
+        }, 169)
+    }
+</script>
+{% endblock %}
