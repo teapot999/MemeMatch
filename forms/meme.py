@@ -1,10 +1,10 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed
-from wtforms import StringField, TextAreaField, SubmitField, BooleanField, FileField, IntegerRangeField
+from wtforms import StringField, SubmitField, BooleanField, FileField, IntegerRangeField
 from wtforms.validators import DataRequired, ValidationError, Length, NumberRange
 
 
-class RegisterForm(FlaskForm):
+class MakingForm(FlaskForm):
     picture = FileField('Загрузить будущий шедевр', validators=[
         DataRequired(),
         FileAllowed(['png', 'jpg', 'jpeg'], message='Не вижу картинки с форматом JPEG, JPG или PNG')

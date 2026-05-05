@@ -1,16 +1,22 @@
+import base64
+import os
 from datetime import timedelta
 
-from flask import Flask, make_response, render_template, redirect, abort
+from dotenv import load_dotenv
+from flask import Flask, make_response, render_template, redirect, abort, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
 import forms.meme
 import forms.user
 from data import db_session
 from data.memes import Meme
+from data.posts import Post
 from data.users import User
 
+load_dotenv()
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = open('secret_key.txt').read().strip()
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
@@ -53,10 +59,10 @@ def meme_picture(meme_id):
     with db_session.create_session() as db_sess:
         meme = db_sess.get(Meme, meme_id)
 
-        if not meme or not meme.picture:
+        if not meme or not meme.result_path:
             abort(404)
 
-        response = make_response(meme.picture)
+        response = make_response(open(meme.result_path, 'rb').read())
         response.headers.set('Content-Type', 'image/jpeg')
         return response
 
@@ -66,7 +72,7 @@ def meme_picture(meme_id):
 @app.route('/')
 def index():
     with db_session.create_session() as db_sess:
-        memes = db_sess.query(Meme).all()
+        memes = db_sess.query(Post).all()
         return render_template('index.html', memes=memes)
 
 
@@ -171,10 +177,40 @@ def edit_profile():
 
 @app.route('/meme/create', methods=['GET', 'POST'])
 def create_meme():
-    form = forms.meme.RegisterForm()
+    form = forms.meme.MakingForm()
     if form.validate_on_submit():
         with db_session.create_session() as db_sess:
-            ...
+            meme_meta = request.form.get('meme_meta')
+
+            meme = Meme(
+                meta=meme_meta,
+                user=current_user,
+            )
+            db_sess.add(meme)
+            db_sess.flush()
+            meme_id = meme.id
+            user_id = meme.user_id
+
+            meme_source = form.picture.data.read()
+            meme_result_data = request.form.get('meme_result')
+            if meme_result_data:
+                _, b64picture = meme_result_data.split(',', 1)
+                meme_result = base64.b64decode(b64picture)
+
+            _folderpath = os.path.join(app.root_path, 'static', 'uploads')
+            source_filepath = os.path.join(_folderpath, f'sources/user{user_id}-meme{meme_id}.jpg')
+            result_filepath = os.path.join(_folderpath, f'results/user{user_id}-meme{meme_id}.jpg')
+
+            with open(source_filepath, 'wb') as source:
+                source.write(meme_source)
+            with open(result_filepath, 'wb') as result:
+                result.write(meme_result)
+
+            meme.source_path = source_filepath
+            meme.result_path = result_filepath
+
+            db_sess.merge(meme)
+            db_sess.commit()
 
             return redirect('/')
 
@@ -182,7 +218,7 @@ def create_meme():
 
 
 def main():
-    db_session.global_init("db/table.db", debug=False)
+    db_session.global_init(os.getenv('DATABASE_PATH'), debug=False)
 
     login_manager = LoginManager()
     login_manager.init_app(app)

@@ -21,6 +21,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     picture = sa.Column(sa.String, nullable=True)
 
     memes = orm.relationship("Meme", back_populates='user')
+    posts = orm.relationship("Post", back_populates='user')
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)

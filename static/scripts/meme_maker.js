@@ -53,7 +53,6 @@ async function makeTextMeme(image, canvas, ctx, options) {
  * @param image - Исходная пикча
  * @param options - Параметры мема:
  * @param {number} options.jackalDegree - Степень шакализации
- * @param {number} options.jackalPower - Количество итераций
  */
 async function makeJackalMeme(image, options) {
     let {jackalDegree = 0} = options;
@@ -137,7 +136,7 @@ async function makeMeme(imageSource, imagePreview, options) {
     let currentSource = imageSource;
 
     if (jackalType) {
-        let params = { jackalDegree };
+        let params = {jackalDegree};
         const jackalBase64 = await makeJackalMeme(currentSource, params);
         currentSource = await new Promise(res => {
             const img = new Image();
@@ -147,7 +146,7 @@ async function makeMeme(imageSource, imagePreview, options) {
     }
 
     if (textType) {
-        let params = { topText, bottomText }
+        let params = {topText, bottomText}
         await makeTextMeme(currentSource, canvas, ctx, params);
         currentSource = await new Promise(res => {
             const img = new Image();
@@ -157,11 +156,24 @@ async function makeMeme(imageSource, imagePreview, options) {
     }
 
     if (demikType) {
-        let params = { demikTopText, demikBottomText, demikBorder, demikOutline }
+        let params = {demikTopText, demikBottomText, demikBorder, demikOutline}
         await makeDemikMeme(currentSource, canvas, ctx, params);
+    }
+
+    if (jackalType && !textType && !demikType) {
+        canvas.width = currentSource.width;
+        canvas.height = currentSource.height;
+        ctx.drawImage(currentSource, 0, 0);
     }
 
     // console.log("Options:", options);
     // console.log("Canvas size:", canvas.width, "x", canvas.height);
-    imagePreview.src = canvas.toDataURL('image/jpeg', 0.9);
+    const finalDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    imagePreview.src = finalDataUrl;
+
+    const resultInput = document.getElementById('meme-result-input');
+    resultInput.value = finalDataUrl;
+
+    const metaInput = document.getElementById('meme-meta-input');
+    metaInput.value = JSON.stringify(options);
 }

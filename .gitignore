@@ -1,4 +1,6 @@
 .idea
 .venv
+.env
 db/table.db
 alembic
+static/uploads
