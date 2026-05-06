@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 from datetime import timedelta
 
@@ -17,6 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
@@ -180,7 +182,7 @@ def create_meme():
     form = forms.meme.MakingForm()
     if form.validate_on_submit():
         with db_session.create_session() as db_sess:
-            meme_meta = request.form.get('meme_meta')
+            meme_meta = json.loads(request.form.get('meme_meta', '{}'))
 
             meme = Meme(
                 meta=meme_meta,

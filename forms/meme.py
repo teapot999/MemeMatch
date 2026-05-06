@@ -1,22 +1,18 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed
 from wtforms import StringField, SubmitField, BooleanField, FileField, IntegerRangeField
-from wtforms.validators import DataRequired, ValidationError, Length, NumberRange
+from wtforms.validators import DataRequired, ValidationError, NumberRange
 
 
 class MakingForm(FlaskForm):
-    picture = FileField('Загрузить будущий шедевр', validators=[
+    picture = FileField('Загрузить будущий шедевр', render_kw={'accept': 'image/*'}, validators=[
         DataRequired(),
         FileAllowed(['png', 'jpg', 'jpeg'], message='Не вижу картинки с форматом JPEG, JPG или PNG')
     ])
 
     text = BooleanField('Мемно подписать', default=False)
-    text_top = StringField('Надпись сверху', validators=[
-        Length(0, 19)
-    ])
-    text_bottom = StringField('Надпись снизу', validators=[
-        Length(0, 19)
-    ])
+    text_top = StringField('Надпись сверху')
+    text_bottom = StringField('Надпись снизу')
 
     jackal = BooleanField('Зашакалить', default=False)
     jackal_degree = IntegerRangeField('Степень шакальности', default=15, validators=[
@@ -24,12 +20,8 @@ class MakingForm(FlaskForm):
     ])
 
     demik = BooleanField('Сделать демик', default=False)
-    demik_top_text = StringField('Надпись сверху', validators=[
-        Length(0, 27)
-    ])
-    demik_bottom_text = StringField('Надпись снизу', validators=[
-        Length(0, 51)
-    ])
+    demik_top_text = StringField('Надпись сверху')
+    demik_bottom_text = StringField('Надпись снизу')
     demik_frame_width = IntegerRangeField('Ширина рамки', default=52, validators=[
         NumberRange(20, 100)
     ])
