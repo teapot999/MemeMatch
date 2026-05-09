@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/errorpage.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h1>No-no-no, Mr. Fish</h1>
+    <div class="alert-danger warn" role="alert">
+        <p>Беги, глупец. Ты НЕ ПРОЙДЁШЬ!!!</p>
+            <a class="btn btn-light" href="/">Убежать домой</a>
+    </div>
+    <img src="{{ url_for('static', filename='img/you_shall_not_pass.jpg') }}" alt="Даже к картинке доступ запрещён">
+</div>
+{% endblock %}

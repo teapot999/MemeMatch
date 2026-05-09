@@ -4,8 +4,9 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, make_response, render_template, redirect, abort, request
+from flask import Flask, make_response, render_template, redirect, abort, request, url_for, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from sqlalchemy.orm import joinedload
 
 import forms.meme
 import forms.user
@@ -31,6 +32,11 @@ app.json.ensure_ascii = False
 @app.errorhandler(401)
 def unauthorized(e):
     return render_template('401.html', title='Кто вы?'), 401
+
+
+@app.errorhandler(403)
+def unauthorized(e):
+    return render_template('403.html', title='Доступ запрещён'), 401
 
 
 @app.errorhandler(404)
@@ -64,9 +70,7 @@ def meme_picture(meme_id):
         if not meme or not meme.result_path:
             abort(404)
 
-        response = make_response(open(meme.result_path, 'rb').read())
-        response.headers.set('Content-Type', 'image/jpeg')
-        return response
+        return send_from_directory(app.root_path, meme.result_path.replace('\\', '/'))
 
 
 # ====== Pages ======
@@ -74,8 +78,8 @@ def meme_picture(meme_id):
 @app.route('/')
 def index():
     with db_session.create_session() as db_sess:
-        memes = db_sess.query(Post).all()
-        return render_template('index.html', memes=memes)
+        posts = db_sess.query(Post).all()
+        return render_template('index.html', posts=posts)
 
 
 # === Register and login ===
@@ -88,7 +92,7 @@ def register():
             if db_sess.query(User).filter(User.username == form.username.data).first():
                 return render_template('register.html', title='Регистрация',
                                        form=form,
-                                       message="Пользователь с таким юзернеймом уже есть уже есть")
+                                       message="Пользователь с таким юзернеймом уже есть")
 
             user = User(
                 nickname=form.nickname.data,
@@ -100,7 +104,6 @@ def register():
             db_sess.add(user)
             db_sess.commit()
             login_user(user, remember=form.remember_me.data)
-            db_sess.close()
             return redirect('/')
 
     return render_template('register.html', title='Регистрация', form=form)
@@ -178,6 +181,7 @@ def edit_profile():
 # === Memes ===
 
 @app.route('/meme/create', methods=['GET', 'POST'])
+@login_required
 def create_meme():
     form = forms.meme.MakingForm()
     if form.validate_on_submit():
@@ -199,9 +203,9 @@ def create_meme():
                 _, b64picture = meme_result_data.split(',', 1)
                 meme_result = base64.b64decode(b64picture)
 
-            _folderpath = os.path.join(app.root_path, 'static', 'uploads')
-            source_filepath = os.path.join(_folderpath, f'sources/user{user_id}-meme{meme_id}.jpg')
-            result_filepath = os.path.join(_folderpath, f'results/user{user_id}-meme{meme_id}.jpg')
+            _folderpath = os.path.join('static', 'uploads')
+            source_filepath = os.path.join(_folderpath, 'sources', f'user{user_id}-meme{meme_id}.jpg')
+            result_filepath = os.path.join(_folderpath, 'results', f'user{user_id}-meme{meme_id}.jpg')
 
             with open(source_filepath, 'wb') as source:
                 source.write(meme_source)
@@ -211,12 +215,49 @@ def create_meme():
             meme.source_path = source_filepath
             meme.result_path = result_filepath
 
-            db_sess.merge(meme)
+            db_sess.commit()
+
+            return redirect(url_for('upload_meme', meme_id=meme_id))
+
+    return render_template(
+        'meme_maker.html',
+        page_title='Создание мема',
+        title='1. Создание мема',
+        form=form)
+
+
+@app.route('/meme/upload/<int:meme_id>', methods=['GET', 'POST'])
+@login_required
+def upload_meme(meme_id):
+    with (db_session.create_session() as db_sess):
+        meme = db_sess.query(Meme).options(joinedload(Meme.user)).get(meme_id)
+        if not meme:
+            abort(404)
+
+        is_uploading_by_current_user = (meme.user_id == current_user.id)
+        is_published = db_sess.query(Post.meme_id).filter(Post.meme_id == meme_id).first() is not None
+        if not is_uploading_by_current_user or is_published:
+            abort(403)
+
+        form = forms.meme.UploadingForm()
+        if form.validate_on_submit():
+            post = Post(
+                user=db_sess.merge(current_user),
+                meme=meme,
+                title=form.title.data,
+                description=form.descr.data)
+            db_sess.add(post)
             db_sess.commit()
 
             return redirect('/')
 
-    return render_template('meme_maker.html', title='Создание мема', form=form)
+    return render_template(
+        'meme_uploader.html',
+        page_title='Создание мема',
+        title='2. Выкладывание мема',
+        form=form,
+        meme=meme
+    )
 
 
 def main():
@@ -228,8 +269,7 @@ def main():
     @login_manager.user_loader
     def load_user(user_id):
         with db_session.create_session() as db_sess:
-            user = db_sess.get(User, user_id)
-            return user
+            return db_sess.get(User, user_id)
 
     app.run()
 

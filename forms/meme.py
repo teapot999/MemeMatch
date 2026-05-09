@@ -31,7 +31,6 @@ class MakingForm(FlaskForm):
 
     create = SubmitField('Создать мем')
 
-
     def validate_picture(self, field):
         if field.data:
             max_size = 3.2 * 1024 * 1024
@@ -39,3 +38,9 @@ class MakingForm(FlaskForm):
                 raise ValidationError('Пикча слишком тяжёлая, у компьютера памяти всего 3.2 мегабайта')
 
             field.data.seek(0)
+
+
+class UploadingForm(FlaskForm):
+    title = StringField('Заголовок поста', validators=[DataRequired()])
+    descr = StringField('Описание поста')
+    upload = SubmitField('Выложить мем')

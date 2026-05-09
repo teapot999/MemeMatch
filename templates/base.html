@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="en">
+{% if not page_title %}
+    {% set page_title = title %}
+{% endif %}
+<html lang="ru">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -10,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/default.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/classes.css') }}"/>
     {% block css %}{% endblock %}
-    <title>MemeMatch{% if title %}: {{ title }}{% endif %}</title>
+    <title>MemeMatch{% if page_title %}: {{ page_title }}{% endif %}</title>
 </head>
 <body>
 <header>

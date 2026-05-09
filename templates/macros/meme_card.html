@@ -1,0 +1,52 @@
+{% macro meme_card(meme, current_user, post=None) %}
+<div class="border meme-card">
+    {% set user = meme.user %}
+    {% set auth = current_user.is_authenticated %}
+    {% set is_admin = auth and current_user.id == 9 %}
+    <div class="memeheader">
+        <div class="from-user">
+            <img src="{{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-little" loading="lazy">
+            <a href="profile/{{ user.id }}" class="nickname text-secondary">{{ user.nickname }}</a>
+        </div>
+        <div class="title">
+            <p class="heading-text header">{% if post %}{{ post.title }}{% endif %}</p>
+        </div>
+        <span></span>
+    </div>
+    <div class="memebody">
+        <div class="control-buttons column">
+            {% if is_admin %}
+                <a class="btn btn-danger">🗑️</a>
+                <a class="btn btn-dark">🚫</a>
+            {% elif auth and user and user.id == current_user.id %}
+                <a class="btn btn-warning">📝</a>
+                <a class="btn btn-danger">🗑️</a>
+            {% endif %}
+            <a class="btn btn-outline-warning">⏬</a>
+        </div>
+        <div class="border meme-content">
+            <img src="{{ url_for('meme_picture', meme_id=meme.id) }}" alt="" class="meme" loading="lazy">
+            <p class="text-secondary descr">{% if post %}{{ post.description }}{% endif %}</p>
+        </div>
+        <div class="control-buttons column">
+            <a class="btn btn-outline-danger">❤️</a>
+            <a class="btn btn-success">🔀</a>
+        </div>
+    </div>
+    <div class="memefooter">
+        <div class="memestat">
+            <div class="stat-item">
+                <p>{{ meme.likes|length }} ❤️</p>
+            </div>
+            <div class="stat-item">
+                <p>{{ meme.matches|length }} 🔄️</p>
+            </div>
+        </div>
+        <div class="create-date">
+            <div class="stat-item">
+                <p>{% if post %}{{ post.created_date }}{% endif %}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
