@@ -1,14 +1,16 @@
 {% extends "base.html" %}
 
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/errorpage.css') }}"/>
+{% endblock %}
+
 {% block content %}
-<div style="display: block; align-content: center; margin: auto; align-items: center; text-align: center">
+<div class="error-page">
     <h1>Страница не найдена</h1>
-    <div class="alert-danger" role="alert">
+    <div class="alert-danger warn" role="alert">
         <p>Поздравляем! Вы забрели на невиданные никем земли (буквально).</p>
-<!--        <button type="button" class="btn btn-danger">-->
-            <a href="/">Убежать домой</a>
-<!--        </button>-->
+            <a class="btn btn-light" href="/">Убежать домой</a>
     </div>
-    <img src="../static/img/okak.jpg" alt="И картинка не загрузилась. Окак.">
+    <img src="{{ url_for('static', filename='img/okak.jpg') }}" alt="И картинка не загрузилась. Окак.">
 </div>
 {% endblock %}

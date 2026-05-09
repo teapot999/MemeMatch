@@ -1,5 +1,3 @@
-import datetime
-
 import sqlalchemy as sa
 from sqlalchemy import orm
 
@@ -10,12 +8,11 @@ class Meme(SqlAlchemyBase):
     __tablename__ = 'memes'
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    title = sa.Column(sa.String, nullable=True)
-    description = sa.Column(sa.String, nullable=True)
-    picture = sa.Column(sa.BLOB)
-    created_date = sa.Column(sa.DateTime, default=datetime.datetime.now)
-    project_type = sa.Column(sa.String)
+    source_path = sa.Column(sa.String)
+    result_path = sa.Column(sa.String)
+    parent_meme_id = sa.Column(sa.Integer, nullable=True)
     meta = sa.Column(sa.JSON)
 
     user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id"))
     user = orm.relationship('User')
+    post = orm.relationship('Post', back_populates='meme')

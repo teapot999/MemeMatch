@@ -1,4 +1,7 @@
 flask
+flask-login
+flask-restful
 flask-wtf
+python-dotenv
 sqlalchemy
 sqlalchemy-serializer

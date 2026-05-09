@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/errorpage.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h1>Вы кто такой? Я вас не знаю!</h1>
+    <div class="alert-danger warn" role="alert">
+        <p>SkyNet вас не распознал. Пожалуйста, войдите в систему.</p>
+        <div class="control-buttons row">
+            <a class="btn btn-light" href="/register">Зарегистрироваться</a>
+            <a class="btn btn-light" href="/login">Войти</a>
+        </div>
+    </div>
+    <img src="{{ url_for('static', filename='img/who_are_you.png') }}" alt="Даже картинка не загрузилась ¯\_(ツ)_/¯">
+</div>
+{% endblock %}

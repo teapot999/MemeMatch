@@ -1,3 +1,6 @@
 .idea
 .venv
-.db
+.env
+db/table.db
+alembic
+static/uploads

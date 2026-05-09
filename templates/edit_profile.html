@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container memefeed">
+    <div class="container">
+        <img id="preview-image" src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-big">
+        <h2 id="preview-nickname" class="heading-text">{{ current_user.nickname }}</h2>
+        <p id="preview-about" class="text-secondary">{{current_user.about }}</p>
+    </div>
+</div>
+
+<form action="" method="post" enctype="multipart/form-data" class="memefeed">
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.username.label }}<br>
+        {{ form.username(
+            placeholder=current_user.username,
+            class="form-control",
+            pattern="^[a-zA-Z0-9][a-zA-Z0-9_~]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+            minlength="5",
+            maxlength="32",
+            title="Имя пользователя может состоять из латиницы и символов _ ~, но не по краям. Состоит из 5 символов, не меньше, и из 32, не больше"
+        )
+        }}<br>
+        {% for error in form.username.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.nickname.label }}<br>
+        {{ form.nickname(placeholder=current_user.nickname, class="form-control", maxlength="50", oninput="previewNickname(this)") }}<br>
+        {% for error in form.nickname.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.about.label }}<br>
+        {{ form.about(placeholder=current_user.about, class="form-control", maxlength="512", oninput="previewAbout(this)") }}<br>
+        {% for error in form.about.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.picture.label }}<br>
+        {{ form.picture(class="form-control", type="file", onchange="previewImage(this)") }}<br>
+        {% for error in form.picture.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+
+    </p>
+    <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
+    {{message}}
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='scripts/edit_profile.js') }}"></script>
+{% endblock %}

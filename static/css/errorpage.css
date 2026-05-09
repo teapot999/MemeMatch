@@ -1,0 +1,25 @@
+.error-page {
+    display: flex;
+    align-content: center;
+    margin: auto;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.error-page .warn {
+    display: flex;
+    flex-direction: column;
+    justify-items: center;
+    align-items: center;
+    width: 100%;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+.error-page img {
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
+}

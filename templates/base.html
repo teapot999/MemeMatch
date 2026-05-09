@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="en">
+{% if not page_title %}
+    {% set page_title = title %}
+{% endif %}
+<html lang="ru">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -7,25 +10,34 @@
           href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
           integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
           crossorigin="anonymous">
-    <link rel="stylesheet" type="text/css" href="../static/css/style.css"/>
-    {% if not title %}
-    {% set title = "MemeMatch" %}
-    {% endif %}
-    <title>{{title}}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/default.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/classes.css') }}"/>
+    {% block css %}{% endblock %}
+    <title>MemeMatch{% if page_title %}: {{ page_title }}{% endif %}</title>
 </head>
 <body>
 <header>
     <nav class="navbar navbar-light bg-light">
         <a class="navbar-brand" href="/">MemeMatch</a>
-<!--        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"-->
-<!--                aria-controls="navbarNav" aria-expanded="false" aria-label="Переключатель навигации">-->
-<!--            <span class="navbar-toggler-icon"></span>-->
-<!--        </button>-->
+        <a class="navbar-brand" href="" style="margin-left: 5%">{% if title %}{{ title }}{% else %}Главная{% endif %}</a>
+        <div class="d-flex align-items-center">
+        {% if current_user.is_authenticated %}
+            <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little" style="margin-right: 10px">
+            <a class="navbar-brand" href="/profile">{{ current_user.nickname }}</a>
+            <a class="btn btn-danger" href="/logout">Выйти</a>
+        {% else %}
+            <p>
+                <a class="btn btn-primary" href="/register">Зарегистрироваться</a>
+                <a class="btn btn-success" href="/login">Войти</a>
+            </p>
+        {% endif %}
+        </div>
     </nav>
 </header>
 <!-- Begin page content -->
 <main role="main" class="container">
     {% block content %}{% endblock %}
 </main>
+{% block scripts %}{% endblock %}
 </body>
 </html>
