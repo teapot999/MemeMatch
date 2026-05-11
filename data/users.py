@@ -20,8 +20,12 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     created_date = sa.Column(sa.DateTime, default=datetime.now)
     picture = sa.Column(sa.String, nullable=True)
 
-    memes = orm.relationship("Meme", back_populates='user')
-    posts = orm.relationship("Post", back_populates='user')
+    memes = orm.relationship('Meme', back_populates='user')
+    posts = orm.relationship('Post', back_populates='user')
+    likes = orm.relationship('Like', back_populates='user')
+
+    matches_as_author = orm.relationship('Match', foreign_keys='[Match.author_id]', back_populates='author')
+    matches_as_matchman = orm.relationship('Match', foreign_keys='[Match.matchman_id]', back_populates='matchman')
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)

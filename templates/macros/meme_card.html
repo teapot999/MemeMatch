@@ -2,16 +2,18 @@
 <div class="border meme-card">
     {% set user = meme.user %}
     {% set auth = current_user.is_authenticated %}
-    {% set is_admin = auth and current_user.id == 9 %}
+    {% set is_admin = auth and current_user.id == 1 %}
     <div class="memeheader">
         <div class="from-user">
             <img src="{{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-little" loading="lazy">
-            <a href="profile/{{ user.id }}" class="nickname text-secondary">{{ user.nickname }}</a>
+            <a href="/profile/{{ user.id }}" class="nickname text-secondary">{{ user.nickname }}</a>
         </div>
         <div class="title">
-            <p class="heading-text header">{% if post %}{{ post.title }}{% endif %}</p>
+            <p id="preview-title-text" class="heading-text header title">
+                {% if post %}{{ post.title }}{% endif %}
+            </p>
         </div>
-        <span></span>
+        <div class="header-spacer"></div>
     </div>
     <div class="memebody">
         <div class="control-buttons column">
@@ -26,7 +28,9 @@
         </div>
         <div class="border meme-content">
             <img src="{{ url_for('meme_picture', meme_id=meme.id) }}" alt="" class="meme" loading="lazy">
-            <p class="text-secondary descr">{% if post %}{{ post.description }}{% endif %}</p>
+            <p id="preview-descr-text" class="text-secondary descr">
+                {% if post %}{{ post.description }}{% endif %}
+            </p>
         </div>
         <div class="control-buttons column">
             <a class="btn btn-outline-danger">❤️</a>

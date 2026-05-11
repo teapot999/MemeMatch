@@ -2,5 +2,7 @@
 .venv
 .env
 db/table.db
+alembic.ini
 alembic
+static/avatars
 static/uploads

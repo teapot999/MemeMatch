@@ -14,5 +14,5 @@ class Meme(SqlAlchemyBase):
     meta = sa.Column(sa.JSON)
 
     user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id"))
-    user = orm.relationship('User')
-    post = orm.relationship('Post', back_populates='meme')
+    user = orm.relationship('User', back_populates='memes')
+    post = orm.relationship('Post', back_populates='meme', uselist=False)
