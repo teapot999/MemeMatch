@@ -142,13 +142,17 @@ def profile():
 
 
 @app.route('/profile/<int:user_id>')
+@app.route('/profile/<user_id>')
 def someones_profile(user_id):
     with db_session.create_session() as db_sess:
-        user = db_sess.get(User, user_id)
+        if isinstance(user_id, int):
+            user = db_sess.get(User, user_id)
+        else:
+            user = db_sess.query(User).filter(User.username == user_id).first()
         if not user:
             abort(404)
 
-        is_owner = current_user.is_authenticated and user_id == current_user.id
+        is_owner = current_user.is_authenticated and user.id == current_user.id
 
         return render_template('profile.html', title='Профиль', user=user, is_owner=is_owner)
 
