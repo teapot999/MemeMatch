@@ -1,19 +1,22 @@
 import base64
 import json
+import mimetypes
 import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, make_response, render_template, redirect, abort, request, url_for, send_from_directory
+from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy.orm import joinedload
 
 import forms.meme
 import forms.user
 from data import db_session
+from data.likes import Like
 from data.memes import Meme
 from data.posts import Post
 from data.users import User
+from wrappers import admin_only, current_user_only
 
 load_dotenv()
 
@@ -24,6 +27,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60 * 60 * 24 * 7
 app.json.ensure_ascii = False
 
 
@@ -55,11 +59,35 @@ def user_avatar(user_id):
             abort(404)
 
         if not user.picture:
-            return app.send_static_file('img/default_avatar.jpg')
+            directory = os.path.join(app.root_path, 'static', 'img')
+            filename = 'default_avatar.jpg'
+            full_file_path = os.path.join(directory, filename)
 
-        response = make_response(user.picture)
-        response.headers.set('Content-Type', 'image/jpeg')
-        return response
+            if not os.path.exists(full_file_path):
+                abort(404)
+
+            response = send_from_directory(directory, filename)
+            mtime = os.path.getmtime(full_file_path)
+
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+            response.set_etag(f"user-default-{mtime}")
+            return response.make_conditional(request)
+
+        clean_path = user.picture.replace('\\', '/')
+        directory = os.path.join(app.root_path, os.path.dirname(clean_path))
+        filename = os.path.basename(clean_path)
+
+        full_file_path = os.path.join(directory, filename)
+        if not os.path.exists(full_file_path):
+            abort(404)
+
+        response = send_from_directory(directory, filename)
+        mtime = os.path.getmtime(full_file_path)
+
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        response.set_etag(f"user-{user_id}-{mtime}")
+
+        return response.make_conditional(request)
 
 
 @app.route('/meme_picture/<int:meme_id>')
@@ -70,7 +98,29 @@ def meme_picture(meme_id):
         if not meme or not meme.result_path:
             abort(404)
 
-        return send_from_directory(app.root_path, meme.result_path.replace('\\', '/'))
+        clean_path = meme.result_path.replace('\\', '/')
+
+        if clean_path.startswith('static/'):
+            clean_path = clean_path.replace('static/', '', 1)
+
+        full_file_path = os.path.join(app.root_path, 'static', clean_path)
+
+        if not os.path.exists(full_file_path):
+            print(f"DEBUG 404: Файл физически не найден: {full_file_path}")
+            abort(404)
+
+        response = send_from_directory(os.path.join(app.root_path, 'static'), clean_path)
+
+        mime_type, _ = mimetypes.guess_type(full_file_path)
+        if mime_type:
+            response.headers['Content-Type'] = mime_type
+
+        mtime = os.path.getmtime(full_file_path)
+
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        response.set_etag(f"meme-{meme_id}-{mtime}")
+
+        return response.make_conditional(request)
 
 
 # ====== Pages ======
@@ -98,10 +148,16 @@ def register():
                 nickname=form.nickname.data,
                 username=form.username.data,
                 about=form.about.data,
-                picture=form.picture.data.read()
             )
-            user.set_password(form.password.data)
             db_sess.add(user)
+            db_sess.flush()
+
+            avatar_path = os.path.join('static', 'avatars', f'user{user.id}.jpg')
+            with open(avatar_path, 'wb') as avatar:
+                avatar.write(form.picture.data.read())
+            user.picture = avatar_path
+
+            user.set_password(form.password.data)
             db_sess.commit()
             login_user(user, remember=form.remember_me.data)
             return redirect('/')
@@ -171,7 +227,11 @@ def edit_profile():
             current_user.username = form.username.data or current_user.username
             current_user.about = form.about.data or current_user.about
             current_user.nickname = form.nickname.data or current_user.nickname
-            current_user.picture = form.picture.data.read() or current_user.picture
+
+            avatar_path = os.path.join('static', 'avatars', f'user{current_user.id}.jpg')
+            with open(avatar_path, 'wb') as avatar:
+                avatar.write(form.picture.data.read())
+            current_user.picture = avatar_path or current_user.picture
 
             db_sess.merge(current_user)
 
@@ -230,7 +290,7 @@ def create_meme():
         form=form)
 
 
-@app.route('/meme/upload/<int:meme_id>', methods=['GET', 'POST'])
+@app.route('/meme/<int:meme_id>/upload', methods=['GET', 'POST'])
 @login_required
 def upload_meme(meme_id):
     with (db_session.create_session() as db_sess):
@@ -262,6 +322,62 @@ def upload_meme(meme_id):
         form=form,
         meme=meme
     )
+
+
+# === Posts ===
+
+def deleting_post(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post or not post.meme:
+            abort(404)
+
+        for path in [post.meme.source_path, post.meme.result_path]:
+            if path and os.path.exists(path):
+                os.remove(path)
+
+        db_sess.delete(post.meme)
+        db_sess.delete(post)
+        db_sess.commit()
+
+
+@app.route("/post/<int:post_id>/delete/no-agree")
+@login_required
+@admin_only
+def revoke_post(post_id):
+    deleting_post(post_id)
+
+    return redirect('/')
+
+
+@app.route("/post/<int:post_id>/delete")
+@login_required
+@current_user_only(Post, url_param='post_id')
+def delete_post(post_id):
+    deleting_post(post_id)
+
+    return redirect('/')
+
+
+@app.route("/post/<int:post_id>/like")
+@login_required
+def like_post(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            abort(404)
+
+        already_liked = db_sess.query(Like).filter(
+            Like.user_id == current_user.id,
+            Like.post_id == post_id).first()
+        if already_liked:
+            db_sess.delete(already_liked)
+        else:
+            new_like = Like(user=db_sess.merge(current_user), post=post)
+            db_sess.add(new_like)
+        db_sess.commit()
+
+    return redirect(f'/#post-{post_id}')
 
 
 def main():
