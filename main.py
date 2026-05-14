@@ -37,6 +37,7 @@ app.json.ensure_ascii = False
 @app.errorhandler(403)
 @app.errorhandler(404)
 @app.errorhandler(405)
+@app.errorhandler(413)
 @app.errorhandler(418)
 @app.errorhandler(500)
 def not_found(e):
@@ -46,6 +47,7 @@ def not_found(e):
         403: 'Доступ запрещён',
         404: 'Пофиг, потеряли',
         405: 'Убери свои шаловливые ручки',
+        413: 'Слишком тяжёлый файл',
         418: 'Вы не чайник',
         500: 'Всё упало',
     }
@@ -215,10 +217,11 @@ def register():
             db_sess.add(user)
             db_sess.flush()
 
-            avatar_path = os.path.join('static', 'avatars', f'user{user.id}.jpg')
-            with open(avatar_path, 'wb') as avatar:
-                avatar.write(form.picture.data.read())
-            user.picture = avatar_path
+            if pic_data := form.picture.data.read():
+                avatar_path = os.path.join('static', 'avatars', f'user{user.id}.jpg')
+                with open(avatar_path, 'wb') as avatar:
+                    avatar.write(pic_data)
+                user.picture = avatar_path
 
             user.set_password(form.password.data)
             db_sess.commit()
@@ -399,7 +402,10 @@ def main():
         with db_session.create_session() as db_sess:
             return db_sess.get(User, user_id)
 
-    app.run()
+    host = '0.0.0.0' if os.getenv('HOST') else '127.0.0.1'
+    port = int(os.getenv('PORT', 5000))
+
+    app.run(host=host, port=port)
 
 
 if __name__ == '__main__':
