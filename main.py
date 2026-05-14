@@ -5,9 +5,8 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory
+from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory, jsonify, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 import forms.meme
@@ -17,7 +16,7 @@ from data.likes import Like
 from data.memes import Meme
 from data.posts import Post
 from data.users import User
-from wrappers import admin_only, current_user_only
+from wrappers import api_or_login_required
 
 load_dotenv()
 
@@ -37,6 +36,7 @@ app.json.ensure_ascii = False
 @app.errorhandler(401)
 @app.errorhandler(403)
 @app.errorhandler(404)
+@app.errorhandler(405)
 @app.errorhandler(418)
 @app.errorhandler(500)
 def not_found(e):
@@ -45,8 +45,9 @@ def not_found(e):
         401: 'Кто вы?',
         403: 'Доступ запрещён',
         404: 'Пофиг, потеряли',
+        405: 'Убери свои шаловливые ручки',
         418: 'Вы не чайник',
-        500: 'Всё упало'
+        500: 'Всё упало',
     }
     return render_template(f'error_pages/{code}.html', title=titles[code]), code
 
@@ -109,7 +110,6 @@ def meme_picture(meme_id):
         full_file_path = os.path.join(app.root_path, 'static', clean_path)
 
         if not os.path.exists(full_file_path):
-            print(f"DEBUG 404: Файл физически не найден: {full_file_path}")
             abort(404)
 
         response = send_from_directory(os.path.join(app.root_path, 'static'), clean_path)
@@ -124,6 +124,66 @@ def meme_picture(meme_id):
         response.set_etag(f"meme-{meme_id}-{mtime}")
 
         return response.make_conditional(request)
+
+
+# === API ===
+
+@app.route("/api/post/<int:post_id>/like", methods=['POST'])
+@api_or_login_required
+def like_post_api(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
+
+        already_liked = db_sess.query(Like).filter(
+            Like.user_id == g.api_user.id,
+            Like.post_id == post_id
+        ).first()
+
+        if already_liked:
+            db_sess.delete(already_liked)
+            action = 'unliked'
+        else:
+            new_like = Like(user=db_sess.merge(g.api_user), post=post)
+            db_sess.add(new_like)
+            action = 'liked'
+
+        db_sess.commit()
+
+        likes_count = db_sess.query(Like).filter(Like.post_id == post_id).count()
+
+    return jsonify({
+        'status': 'ok',
+        'action': action,
+        'likes_count': likes_count
+    })
+
+
+@app.route("/api/post/<int:post_id>/delete", methods=['POST'])
+@api_or_login_required
+def delete_post_api(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            return jsonify({'status': 'error', 'message': 'Post not found or already deleted'}), 404
+
+        likes = db_sess.query(Like).filter(Like.post_id == post_id).all()
+        for like in likes:
+            db_sess.delete(like)
+
+        meme = db_sess.get(Meme, post.meme_id)
+
+        for path in [meme.source_path, meme.result_path]:
+            if path and os.path.exists(path):
+                os.remove(path)
+
+        db_sess.delete(meme)
+        db_sess.delete(post)
+
+        db_sess.commit()
+
+        return jsonify({'status': 'ok'})
 
 
 # ====== Pages ======
@@ -231,10 +291,11 @@ def edit_profile():
             current_user.about = form.about.data or current_user.about
             current_user.nickname = form.nickname.data or current_user.nickname
 
-            avatar_path = os.path.join('static', 'avatars', f'user{current_user.id}.jpg')
-            with open(avatar_path, 'wb') as avatar:
-                avatar.write(form.picture.data.read())
-            current_user.picture = avatar_path or current_user.picture
+            if pic_data := form.picture.data.read():
+                avatar_path = os.path.join('static', 'avatars', f'user{current_user.id}.jpg')
+                with open(avatar_path, 'wb') as avatar:
+                    avatar.write(pic_data)
+                current_user.picture = avatar_path or current_user.picture
 
             db_sess.merge(current_user)
 
@@ -325,81 +386,6 @@ def upload_meme(meme_id):
         form=form,
         meme=meme
     )
-
-
-# === Posts ===
-
-def deleting_post(post_id):
-    with db_session.create_session() as db_sess:
-        post = db_sess.get(Post, post_id)
-        if not post or not post.meme:
-            abort(404)
-
-        for path in [post.meme.source_path, post.meme.result_path]:
-            if path and os.path.exists(path):
-                os.remove(path)
-
-        db_sess.delete(post.meme)
-        db_sess.delete(post)
-        db_sess.commit()
-
-
-def get_nearest_post_id(post_id):
-    with db_session.create_session() as db_sess:
-        post_ids = db_sess.scalars(select(Post.id).order_by(Post.created_date.desc())).all()
-
-        anchor_id = None
-        if post_id in post_ids:
-            current_index = post_ids.index(post_id)
-            if current_index + 1 < len(post_ids):
-                anchor_id = post_ids[current_index + 1]
-            elif current_index - 1 >= 0:
-                anchor_id = post_ids[current_index - 1]
-
-        return anchor_id
-
-
-@app.route("/post/<int:post_id>/delete/no-agree")
-@login_required
-@admin_only
-def revoke_post(post_id):
-    anchor_id = get_nearest_post_id(post_id)
-
-    deleting_post(post_id)
-
-    return redirect(f'/#post-{anchor_id}')
-
-
-@app.route("/post/<int:post_id>/delete")
-@login_required
-@current_user_only(Post, url_param='post_id')
-def delete_post(post_id):
-    anchor_id = get_nearest_post_id(post_id)
-
-    deleting_post(post_id)
-
-    return redirect(f'/#post-{anchor_id}')
-
-
-@app.route("/post/<int:post_id>/like")
-@login_required
-def like_post(post_id):
-    with db_session.create_session() as db_sess:
-        post = db_sess.get(Post, post_id)
-        if not post:
-            abort(404)
-
-        already_liked = db_sess.query(Like).filter(
-            Like.user_id == current_user.id,
-            Like.post_id == post_id).first()
-        if already_liked:
-            db_sess.delete(already_liked)
-        else:
-            new_like = Like(user=db_sess.merge(current_user), post=post)
-            db_sess.add(new_like)
-        db_sess.commit()
-
-    return redirect(f'/#post-{post_id}')
 
 
 def main():

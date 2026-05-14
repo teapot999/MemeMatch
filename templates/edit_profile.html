@@ -5,7 +5,7 @@
     <div class="container">
         <img id="preview-image" src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-big">
         <h2 id="preview-nickname" class="heading-text">{{ current_user.nickname }}</h2>
-        <p id="preview-about" class="text-secondary">{{current_user.about }}</p>
+        <p id="preview-about" class="text-secondary">{{ current_user.about }}</p>
     </div>
 </div>
 
@@ -30,7 +30,7 @@
     </p>
     <p>
         {{ form.nickname.label }}<br>
-        {{ form.nickname(placeholder=current_user.nickname, class="form-control", maxlength="50", oninput="previewNickname(this)") }}<br>
+        {{ form.nickname(placeholder=current_user.nickname, class="form-control", maxlength="50", oninput="previewNickname(this, '" ~ current_user.nickname ~ "')") }}<br>
         {% for error in form.nickname.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}
@@ -39,7 +39,7 @@
     </p>
     <p>
         {{ form.about.label }}<br>
-        {{ form.about(placeholder=current_user.about, class="form-control", maxlength="512", oninput="previewAbout(this)") }}<br>
+        {{ form.about(placeholder=current_user.about, class="form-control", maxlength="512", oninput="previewAbout(this, '" ~ current_user.about ~ "')") }}<br>
         {% for error in form.about.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}

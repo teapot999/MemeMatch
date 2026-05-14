@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/errorpage.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <h1>Не терплю этот метод к себе</h1>
+    <div class="alert-danger warn" role="alert">
+        <p>Он использует неверный метод для тебя? Ред флаг!!!</p>
+            <a class="btn btn-light" href="/">Убежать домой</a>
+    </div>
+    <img src="{{ url_for('static', filename='img/coo_coo.jpg') }}" alt="Не картинка, а сплошной ред флаг">
+</div>
+{% endblock %}

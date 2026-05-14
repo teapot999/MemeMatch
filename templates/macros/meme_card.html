@@ -22,10 +22,10 @@
             {% else %}
             <a class="btn btn-dark" href="/post/{{ post.id }}/block-author">🚫</a>
             {% endif %}
-            <a class="btn btn-danger" href="/post/{{ post.id }}/delete/no-agree">🗑️</a>
+            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}">🗑️️</button>
         {% elif auth and user and user.id == current_user.id %}
             <a class="btn btn-warning" href="/post/{{ post.id }}/edit">📝</a>
-            <a class="btn btn-danger" href="/post/{{ post.id }}/delete">🗑️</a>
+            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}">🗑️</button>
         {% endif %}
         <a class="btn btn-outline-warning">⏬</a>
         {% endif %}
@@ -38,7 +38,7 @@
         </div>
         <div class="control-buttons column">
             {% if post %}
-            <a class="btn btn-{% if current_user.id not in post.likes|map(attribute='user_id') %}outline-{% endif %}danger" href="/post/{{ post.id }}/like">❤️</a>
+            <button class="btn btn-{% if current_user.id not in post.likes|map(attribute='user_id') %}outline-{% endif %}danger like-btn" data-post-id="{{ post.id }}">❤️</button>
             <a class="btn btn-success" href="/post/{{ post.id }}/match">🔀</a>
             {% endif %}
         </div>
@@ -46,7 +46,7 @@
     <div class="memefooter">
         <div class="memestat">
             <div class="stat-item">
-                <p>{{ post.likes|length }} ❤️</p>
+                <p><span class="likes-count-val-{{ post.id }}">{{ post.likes|length }}</span> ❤️</p>
             </div>
             <div class="stat-item">
                 <p>{{ post.matches|length }} 🔄️</p>

@@ -1,4 +1,5 @@
 from datetime import datetime
+from secrets import token_hex
 
 from flask_login import UserMixin
 import sqlalchemy as sa
@@ -19,6 +20,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     hashed_password = sa.Column(sa.String, nullable=True)
     created_date = sa.Column(sa.DateTime, default=datetime.now)
     picture = sa.Column(sa.String, nullable=True)
+    api_key = sa.Column(sa.String, nullable=True, unique=True, index=True)
 
     memes = orm.relationship('Meme', back_populates='user')
     posts = orm.relationship('Post', back_populates='user')
@@ -32,3 +34,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
 
     def check_password(self, password):
         return check_password_hash(self.hashed_password, password)
+
+    def generate_api_key(self):
+        self.api_key = token_hex(32)
+        return self.api_key
