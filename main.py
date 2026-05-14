@@ -7,6 +7,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 import forms.meme
@@ -31,21 +32,23 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60 * 60 * 24 * 7
 app.json.ensure_ascii = False
 
 
-# === Error handlers ===
+# === Error handler ===
 
 @app.errorhandler(401)
-def unauthorized(e):
-    return render_template('401.html', title='Кто вы?'), 401
-
-
 @app.errorhandler(403)
-def unauthorized(e):
-    return render_template('403.html', title='Доступ запрещён'), 401
-
-
 @app.errorhandler(404)
+@app.errorhandler(418)
+@app.errorhandler(500)
 def not_found(e):
-    return render_template('404.html', title='Пофиг, потеряли'), 404
+    code = e.code
+    titles = {
+        401: 'Кто вы?',
+        403: 'Доступ запрещён',
+        404: 'Пофиг, потеряли',
+        418: 'Вы не чайник',
+        500: 'Всё упало'
+    }
+    return render_template(f'error_pages/{code}.html', title=titles[code]), code
 
 
 # === In-app API ===
@@ -128,7 +131,7 @@ def meme_picture(meme_id):
 @app.route('/')
 def index():
     with db_session.create_session() as db_sess:
-        posts = db_sess.query(Post).all()
+        posts = db_sess.query(Post).order_by(Post.created_date.desc()).all()
         return render_template('index.html', posts=posts)
 
 
@@ -341,22 +344,41 @@ def deleting_post(post_id):
         db_sess.commit()
 
 
+def get_nearest_post_id(post_id):
+    with db_session.create_session() as db_sess:
+        post_ids = db_sess.scalars(select(Post.id).order_by(Post.created_date.desc())).all()
+
+        anchor_id = None
+        if post_id in post_ids:
+            current_index = post_ids.index(post_id)
+            if current_index + 1 < len(post_ids):
+                anchor_id = post_ids[current_index + 1]
+            elif current_index - 1 >= 0:
+                anchor_id = post_ids[current_index - 1]
+
+        return anchor_id
+
+
 @app.route("/post/<int:post_id>/delete/no-agree")
 @login_required
 @admin_only
 def revoke_post(post_id):
+    anchor_id = get_nearest_post_id(post_id)
+
     deleting_post(post_id)
 
-    return redirect('/')
+    return redirect(f'/#post-{anchor_id}')
 
 
 @app.route("/post/<int:post_id>/delete")
 @login_required
 @current_user_only(Post, url_param='post_id')
 def delete_post(post_id):
+    anchor_id = get_nearest_post_id(post_id)
+
     deleting_post(post_id)
 
-    return redirect('/')
+    return redirect(f'/#post-{anchor_id}')
 
 
 @app.route("/post/<int:post_id>/like")

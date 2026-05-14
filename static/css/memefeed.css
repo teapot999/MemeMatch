@@ -5,6 +5,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    scroll-margin-top: 80px;
 }
 
 .memeheader {
