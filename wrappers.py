@@ -7,7 +7,6 @@ from functools import wraps
 from dotenv import load_dotenv
 from flask import abort, request, jsonify, g
 from flask_login import current_user
-from redis import Redis
 
 from data import db_session
 from data.users import User
@@ -15,22 +14,6 @@ from data.users import User
 load_dotenv()
 
 API_REQUEST_HISTORY = defaultdict(list)
-
-
-def is_rate_limited_redis(user_id):
-    """Временный аналог без использования сервера Redis."""
-    now = time.time()
-
-    # Очищаем старую историю текущего юзера
-    API_REQUEST_HISTORY[user_id] = [t for t in API_REQUEST_HISTORY[user_id] if now - t < TIME_WINDOW]
-
-    # Если лимит превышен — блокируем
-    if len(API_REQUEST_HISTORY[user_id]) >= MAX_REQUESTS:
-        return True
-
-    # Записываем текущий запрос
-    API_REQUEST_HISTORY[user_id].append(now)
-    return False
 
 MAX_REQUESTS = 5
 TIME_WINDOW = 10
@@ -72,16 +55,16 @@ def current_user_only(model, url_param='id'):
     return decorator
 
 
-# def is_rate_limited_redis(user_id):
-#     key = f'rate:user:{user_id}'
-#
-#     current_requests = rediska.incr(key)
-#     if current_requests == 1:
-#         rediska.expire(key, TIME_WINDOW)
-#
-#     if current_requests > MAX_REQUESTS:
-#         return True
-#     return False
+def is_rate_limited(user_id):
+    now = time.time()
+
+    API_REQUEST_HISTORY[user_id] = [t for t in API_REQUEST_HISTORY[user_id] if now - t < TIME_WINDOW]
+
+    if len(API_REQUEST_HISTORY[user_id]) >= MAX_REQUESTS:
+        return True
+
+    API_REQUEST_HISTORY[user_id].append(now)
+    return False
 
 
 def api_or_login_required(func):
@@ -97,7 +80,7 @@ def api_or_login_required(func):
             with db_session.create_session() as db_sess:
                 user = db_sess.query(User).filter(User.hashed_api_key == hashed_api_key).first()
                 if user:
-                    if is_rate_limited_redis(user.id):
+                    if is_rate_limited(user.id):
                         return jsonify({
                             'status': 'error',
                             'message': f'Too many requests. Limit is {MAX_REQUESTS} requests per {TIME_WINDOW} seconds.'

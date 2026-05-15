@@ -169,6 +169,8 @@ def delete_post_api(post_id):
         post = db_sess.get(Post, post_id)
         if not post:
             return jsonify({'status': 'error', 'message': 'Post not found or already deleted'}), 404
+        if post.author_id != g.api_user.id:
+            return jsonify({'status': 'error', 'message': 'Post does not belong to you'}), 403
 
         likes = db_sess.query(Like).filter(Like.post_id == post_id).all()
         for like in likes:
@@ -189,6 +191,7 @@ def delete_post_api(post_id):
 
 
 # ===
+
 @app.route("/api/get-key")
 @login_required
 def generate_user_api_key():
@@ -207,7 +210,7 @@ def get_user_api_key():
     with db_session.create_session() as db_sess:
         raw_api_key = current_user.generate_api_key()
 
-        if not raw_api_key:
+        if raw_api_key:
             return render_template('api_reject_key.html')
 
         db_sess.merge(current_user)
