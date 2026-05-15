@@ -1,0 +1,13 @@
+{% extends base.html %}
+
+{% block content %}
+<div class="error-page">
+    <div class="alert-danger warn" role="alert">
+        <p>Вы уже получили свой Золотой API-Ключик. Можно взять новый или вспомнить, куда ж вы его сохранили.</p>
+        <div class="control-buttons row">
+            <a class="btn btn-light" href="/api/get-key">Получить новый ключ</a>
+            <a class="btn btn-light" href="/">Убежать домой</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

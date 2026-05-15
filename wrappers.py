@@ -1,4 +1,7 @@
+import hashlib
 import os
+import time
+from collections import defaultdict
 from functools import wraps
 
 from dotenv import load_dotenv
@@ -11,7 +14,23 @@ from data.users import User
 
 load_dotenv()
 
-rediska = Redis(host=os.getenv('HOST', 'localhost'), port=6379, db=0)
+API_REQUEST_HISTORY = defaultdict(list)
+
+
+def is_rate_limited_redis(user_id):
+    """Временный аналог без использования сервера Redis."""
+    now = time.time()
+
+    # Очищаем старую историю текущего юзера
+    API_REQUEST_HISTORY[user_id] = [t for t in API_REQUEST_HISTORY[user_id] if now - t < TIME_WINDOW]
+
+    # Если лимит превышен — блокируем
+    if len(API_REQUEST_HISTORY[user_id]) >= MAX_REQUESTS:
+        return True
+
+    # Записываем текущий запрос
+    API_REQUEST_HISTORY[user_id].append(now)
+    return False
 
 MAX_REQUESTS = 5
 TIME_WINDOW = 10
@@ -53,16 +72,16 @@ def current_user_only(model, url_param='id'):
     return decorator
 
 
-def is_rate_limited_redis(user_id):
-    key = f'rate:user:{user_id}'
-
-    current_requests = rediska.incr(key)
-    if current_requests == 1:
-        rediska.expire(key, TIME_WINDOW)
-
-    if current_requests > MAX_REQUESTS:
-        return True
-    return False
+# def is_rate_limited_redis(user_id):
+#     key = f'rate:user:{user_id}'
+#
+#     current_requests = rediska.incr(key)
+#     if current_requests == 1:
+#         rediska.expire(key, TIME_WINDOW)
+#
+#     if current_requests > MAX_REQUESTS:
+#         return True
+#     return False
 
 
 def api_or_login_required(func):
@@ -74,8 +93,9 @@ def api_or_login_required(func):
 
         api_key = request.headers.get('X-API-Key')
         if api_key:
+            hashed_api_key = hashlib.sha256(api_key.encode('utf-8')).hexdigest()
             with db_session.create_session() as db_sess:
-                user = db_sess.query(User).filter(User.api_key == api_key).first()
+                user = db_sess.query(User).filter(User.hashed_api_key == hashed_api_key).first()
                 if user:
                     if is_rate_limited_redis(user.id):
                         return jsonify({

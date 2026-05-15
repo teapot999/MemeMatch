@@ -1,4 +1,5 @@
 from datetime import datetime
+import hashlib
 from secrets import token_hex
 
 from flask_login import UserMixin
@@ -20,7 +21,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     hashed_password = sa.Column(sa.String, nullable=True)
     created_date = sa.Column(sa.DateTime, default=datetime.now)
     picture = sa.Column(sa.String, nullable=True)
-    api_key = sa.Column(sa.String, nullable=True, unique=True, index=True)
+    hashed_api_key = sa.Column(sa.String, nullable=True, unique=True, index=True)
 
     memes = orm.relationship('Meme', back_populates='user')
     posts = orm.relationship('Post', back_populates='user')
@@ -36,5 +37,11 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
         return check_password_hash(self.hashed_password, password)
 
     def generate_api_key(self):
-        self.api_key = token_hex(32)
-        return self.api_key
+        raw_key = token_hex(32)
+
+        self.hashed_api_key = hashlib.sha256(raw_key.encode('utf8')).hexdigest()
+
+        return raw_key
+
+    def check_api_key(self, api_key):
+        return hashlib.sha256(api_key.encode('utf8')).hexdigest() == self.hashed_api_key

@@ -188,6 +188,34 @@ def delete_post_api(post_id):
         return jsonify({'status': 'ok'})
 
 
+# ===
+@app.route("/api/get-key")
+@login_required
+def generate_user_api_key():
+    with db_session.create_session() as db_sess:
+        raw_api_key = current_user.generate_api_key()
+
+        db_sess.merge(current_user)
+        db_sess.commit()
+
+        return render_template('api_new_key.html', api_key=raw_api_key)
+
+
+@app.route("/api/try-get-key")
+@login_required
+def get_user_api_key():
+    with db_session.create_session() as db_sess:
+        raw_api_key = current_user.generate_api_key()
+
+        if not raw_api_key:
+            return render_template('api_reject_key.html')
+
+        db_sess.merge(current_user)
+        db_sess.commit()
+
+        return render_template('api_new_key.html', api_key=raw_api_key)
+
+
 # ====== Pages ======
 
 @app.route('/')
