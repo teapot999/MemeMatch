@@ -10,14 +10,17 @@
             <a class="btn btn-light" href="/profile/edit">Изменить</a>
         {% endif %}
     </div>
+    <hr>
 <!--    <div class="border rounded" style="margin-top: 20px">-->
 <!--        <h3 class="heading-text">Мои мемы</h3>-->
 <!--        {/% for meme in memes %}-->
 <!--            <div class="border rounded">-->
 <!--                <img src="{/{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-little">{/{ meme.user.name }}-->
 <!--                <p class="heading-text">{/{ meme.title }}</p>-->
-<!--                <img src="{/{ url_for('user_memes', user_id=user.id) }}" alt=""> TODO-->
+<!--                <img src="{/{ url_for('user_memes', user_id=user.id) }}" alt="">-->
 <!--        </div>-->
 <!--    </div>-->
+    <hr>
+        <a class="btn btn-dark" href="/my-api/get-key/force-trying">Получить Золотой API-Ключик</a>
 </div>
 {% endblock %}

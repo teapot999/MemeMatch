@@ -1,10 +1,11 @@
 import sqlalchemy as sa
 from sqlalchemy import orm
+from sqlalchemy_serializer import SerializerMixin
 
 from .db_session import SqlAlchemyBase
 
 
-class Meme(SqlAlchemyBase):
+class Meme(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'memes'
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
@@ -14,5 +15,5 @@ class Meme(SqlAlchemyBase):
     meta = sa.Column(sa.JSON)
 
     user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id"))
-    user = orm.relationship('User')
-    post = orm.relationship('Post', back_populates='meme')
+    user = orm.relationship('User', back_populates='memes')
+    post = orm.relationship('Post', back_populates='meme', uselist=False)

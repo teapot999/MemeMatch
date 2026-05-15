@@ -1,18 +1,18 @@
-function previewNickname(input) {
+function previewNickname(input, currentNickname) {
     const nickname = document.getElementById("preview-nickname");
     if (input.value.trim()) {
         nickname.textContent = input.value;
     } else {
-        nickname.textContent = "{{ current_user.nickname }}"
+        nickname.textContent = currentNickname;
     }
 }
 
-function previewAbout(input) {
+function previewAbout(input, currentAbout) {
     const about = document.getElementById('preview-about');
     if (input.value.trim()) {
         about.textContent = input.value;
     } else {
-        about.textContent = "{{ current_user.about }}"
+        about.textContent = currentAbout;
     }
 }
 

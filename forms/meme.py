@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed
-from wtforms import StringField, SubmitField, BooleanField, FileField, IntegerRangeField
+from wtforms import StringField, SubmitField, BooleanField, FileField, IntegerRangeField, TextAreaField
 from wtforms.validators import DataRequired, ValidationError, NumberRange
 
 
@@ -42,5 +42,5 @@ class MakingForm(FlaskForm):
 
 class UploadingForm(FlaskForm):
     title = StringField('Заголовок поста', validators=[DataRequired()])
-    descr = StringField('Описание поста')
+    descr = TextAreaField('Описание поста')
     upload = SubmitField('Выложить мем')

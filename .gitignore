@@ -1,6 +1,5 @@
 .idea
 .venv
 .env
-db/table.db
+alembic.ini
 alembic
-static/uploads

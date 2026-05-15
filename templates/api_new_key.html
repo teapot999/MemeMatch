@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/errorpage.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div class="alert-secondary warn" role="alert">
+        <label class="form-label text-secondary">Вот ваш сокровенный Золотой API-Ключик. Сохраните его куда-нибудь, а то если потеряется, нужно создавать по новой.</label>
+        <div class="input-group">
+            <input type="text"
+                   id="api-key"
+                   class="form-control bg-dark text-warning border-secondary"
+                   value="{{ api_key }}"
+                   readonly>
+            <button type="button"
+                class="btn btn-outline-warning"
+                id="copy-btn"
+                onclick="copyApiKey()"
+                {% if not api_key %}disabled{% endif %}>
+            📋 Копировать
+        </button>
+        </div>
+        <div class="control-buttons row">
+            <a class="btn btn-light" href="/api/get-key">Получить новый ключ</a>
+            <a class="btn btn-light" href="/">Убежать домой</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyApiKey() {
+    const apiKeyInput = document.getElementById('api-key');
+    const copyBtn = document.getElementById('copy-btn');
+
+    if (!apiKeyInput) return;
+
+    navigator.clipboard.writeText(apiKeyInput.value)
+        .then(() => {
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '✅ Скопировано';
+            copyBtn.classList.remove('btn-outline-warning');
+            copyBtn.classList.add('btn-success');
+
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+                copyBtn.classList.remove('btn-success');
+                copyBtn.classList.add('btn-outline-warning');
+            }, 2000);
+        })
+        .catch(err => {
+            console.error('Failed to copy an API key: ', err);
+        });
+}
+</script>
+{% endblock %}

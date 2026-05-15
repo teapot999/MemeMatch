@@ -1,1 +1,1 @@
-from . import users, memes, posts, matches
+from . import users, memes, posts, matches, likes

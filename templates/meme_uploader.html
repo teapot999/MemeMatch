@@ -43,7 +43,13 @@ function changePostText(className, newValue) {
     postElement.textContent = newValue;
 }
 
-document.getElementById('title-input').addEventListener('input', function(e) {changePostText('title', e.target.value)});
-document.getElementById('descr-input').addEventListener('input', function(e) {changePostText('descr', e.target.value)});
+document.getElementById('title-input').addEventListener('input', function(e) {
+    const el = document.getElementById('preview-title-text');
+    if (el) el.textContent = e.target.value;
+});
+document.getElementById('descr-input').addEventListener('input', function(e) {
+    const el = document.getElementById('preview-descr-text');
+    if (el) el.textContent = e.target.value;
+});
 </script>
 {% endblock %}

@@ -1,19 +1,23 @@
 import base64
 import json
+import mimetypes
 import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, make_response, render_template, redirect, abort, request, url_for, send_from_directory
+from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory, jsonify, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 import forms.meme
 import forms.user
 from data import db_session
+from data.likes import Like
 from data.memes import Meme
 from data.posts import Post
 from data.users import User
+from wrappers import api_or_login_required, internal_api_only
 
 load_dotenv()
 
@@ -24,29 +28,41 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60 * 60 * 24 * 7
 app.json.ensure_ascii = False
 
 
-# === Error handlers ===
+# === Error handler ===
 
 @app.errorhandler(401)
-def unauthorized(e):
-    return render_template('401.html', title='Кто вы?'), 401
-
-
 @app.errorhandler(403)
-def unauthorized(e):
-    return render_template('403.html', title='Доступ запрещён'), 401
-
-
 @app.errorhandler(404)
-def not_found(e):
-    return render_template('404.html', title='Пофиг, потеряли'), 404
+@app.errorhandler(405)
+@app.errorhandler(413)
+@app.errorhandler(418)
+@app.errorhandler(500)
+def error_handler(e):
+    code = e.code
+    titles = {
+        401: 'Кто вы?',
+        403: 'Доступ запрещён',
+        404: 'Пофиг, потеряли',
+        405: 'Убери свои шаловливые ручки',
+        413: 'Слишком тяжёлый файл',
+        418: 'Вы не чайник',
+        500: 'Всё упало',
+    }
+
+    if request.path.startswith('/api'):
+        return jsonify({'status': 'error', 'code': code, 'message': e.description})
+
+    return render_template(f'error_pages/{code}.html', title=titles[code]), code
 
 
 # === In-app API ===
 
 @app.route('/user_avatar/<int:user_id>')
+@internal_api_only
 def user_avatar(user_id):
     with db_session.create_session() as db_sess:
         user = db_sess.get(User, user_id)
@@ -55,14 +71,39 @@ def user_avatar(user_id):
             abort(404)
 
         if not user.picture:
-            return app.send_static_file('img/default_avatar.jpg')
+            directory = os.path.join(app.root_path, 'static', 'img')
+            filename = 'default_avatar.jpg'
+            full_file_path = os.path.join(directory, filename)
 
-        response = make_response(user.picture)
-        response.headers.set('Content-Type', 'image/jpeg')
-        return response
+            if not os.path.exists(full_file_path):
+                abort(404)
+
+            response = send_from_directory(directory, filename)
+            mtime = os.path.getmtime(full_file_path)
+
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+            response.set_etag(f"user-default-{mtime}")
+            return response.make_conditional(request)
+
+        clean_path = user.picture.replace('\\', '/')
+        directory = os.path.join(app.root_path, os.path.dirname(clean_path))
+        filename = os.path.basename(clean_path)
+
+        full_file_path = os.path.join(directory, filename)
+        if not os.path.exists(full_file_path):
+            abort(404)
+
+        response = send_from_directory(directory, filename)
+        mtime = os.path.getmtime(full_file_path)
+
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        response.set_etag(f"user-{user_id}-{mtime}")
+
+        return response.make_conditional(request)
 
 
 @app.route('/meme_picture/<int:meme_id>')
+@internal_api_only
 def meme_picture(meme_id):
     with db_session.create_session() as db_sess:
         meme = db_sess.get(Meme, meme_id)
@@ -70,7 +111,255 @@ def meme_picture(meme_id):
         if not meme or not meme.result_path:
             abort(404)
 
-        return send_from_directory(app.root_path, meme.result_path.replace('\\', '/'))
+        clean_path = meme.result_path.replace('\\', '/')
+
+        if clean_path.startswith('static/'):
+            clean_path = clean_path.replace('static/', '', 1)
+
+        full_file_path = os.path.join(app.root_path, 'static', clean_path)
+
+        if not os.path.exists(full_file_path):
+            abort(404)
+
+        response = send_from_directory(os.path.join(app.root_path, 'static'), clean_path)
+
+        mime_type, _ = mimetypes.guess_type(full_file_path)
+        if mime_type:
+            response.headers['Content-Type'] = mime_type
+
+        mtime = os.path.getmtime(full_file_path)
+
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        response.set_etag(f"meme-{meme_id}-{mtime}")
+
+        return response.make_conditional(request)
+
+
+# === API ===
+
+@app.route('/api/user/<int:user_id>')
+@api_or_login_required
+def get_user_api(user_id):
+    with db_session.create_session() as db_sess:
+        user = db_sess.get(User, user_id)
+        if not user:
+            return jsonify({'status': 'error', 'message': 'The user is a lie'}), 404
+
+        user_data = user.to_dict(only=['id', 'username', 'nickname', 'about'])
+        for item in ['username', 'nickname', 'about']:
+            user_data[item] = user_data[item].encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
+
+        return jsonify({'status': 'ok', **user_data})
+
+
+@app.route('/api/user/<int:user_id>/picture')
+@api_or_login_required
+def get_user_avatar_api(user_id):
+    with db_session.create_session() as db_sess:
+        user = db_sess.get(User, user_id)
+
+        if not user:
+            return jsonify({'status': 'error', 'message': 'The user is a lie'}), 404
+
+        if not user.picture:
+            directory = os.path.join(app.root_path, 'static', 'img')
+            filename = 'default_avatar.jpg'
+            full_file_path = os.path.join(directory, filename)
+
+            if not os.path.exists(full_file_path):
+                return jsonify({'status': 'error', 'message': "The user's avatar is a lie"}), 404
+
+            response = send_from_directory(directory, filename)
+            mtime = os.path.getmtime(full_file_path)
+
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+            response.set_etag(f"user-default-{mtime}")
+            return response.make_conditional(request)
+
+        clean_path = user.picture.replace('\\', '/')
+        directory = os.path.join(app.root_path, os.path.dirname(clean_path))
+        filename = os.path.basename(clean_path)
+
+        full_file_path = os.path.join(directory, filename)
+        if not os.path.exists(full_file_path):
+            return jsonify({'status': 'error', 'message': 'User does not set a picture of him.'}), 404
+
+        response = send_from_directory(directory, filename)
+        mtime = os.path.getmtime(full_file_path)
+
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        response.set_etag(f"user-{user_id}-{mtime}")
+
+        return response.make_conditional(request)
+
+
+@app.route('/api/post/<int:post_id>')
+@api_or_login_required
+def get_post_api(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
+
+        post_data = post.to_dict(only=[
+            'id', 'title', 'description', 'created_date', 'author_id', 'meme_id',
+            'matches_from_this', 'match_result'])
+        for item in ['title', 'description']:
+            post_data[item] = post_data[item].encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
+
+        post_likes = db_sess.scalars(select(Like.id).filter(Like.post_id == post_id)).all()
+        post_data.update({'likes': post_likes})
+
+        return jsonify({'status': 'ok', **post_data})
+
+
+@app.route('/api/post/<int:_id>/meme')
+@app.route('/api/meme/<int:_id>')
+@api_or_login_required
+def get_post_meme_api(_id):
+    with db_session.create_session() as db_sess:
+        if request.path.startswith('/api/post'):
+            post = db_sess.get(Post, _id)
+            if not post:
+                return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
+            meme = post.meme
+        else:
+            meme = db_sess.get(Meme, _id)
+
+        if not meme:
+            return jsonify({'status': 'error', 'message': 'The meme is a lie'}), 404
+
+        meme_data = meme.to_dict(only=['id', 'parent_meme_id', 'user_id'])
+
+        meta = meme.meta
+        for k, v in meta.items():
+            if not isinstance(v, str):
+                continue
+            meta[k] = v.encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
+        meme_data.update({'meta': meta})
+
+        return jsonify({'status': 'ok', **meme_data})
+
+
+@app.route('/api/post/<int:post_id>/meme/picture')
+@api_or_login_required
+def get_post_meme_picture_api(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
+
+        meme = post.meme
+        if not meme or not meme.result_path:
+            return jsonify({'status': 'error', 'message': 'The meme is a lie'}), 404
+
+        clean_path = meme.result_path.replace('\\', '/')
+
+        if clean_path.startswith('static/'):
+            clean_path = clean_path.replace('static/', '', 1)
+
+        full_file_path = os.path.join(app.root_path, 'static', clean_path)
+
+        if not os.path.exists(full_file_path):
+            return jsonify({'status': 'error', 'message': 'The meme file is a lie'}), 404
+
+        response = send_from_directory(os.path.join(app.root_path, 'static'), clean_path)
+
+        mime_type, _ = mimetypes.guess_type(full_file_path)
+        if mime_type:
+            response.headers['Content-Type'] = mime_type
+
+        mtime = os.path.getmtime(full_file_path)
+
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        response.set_etag(f"meme-{meme.id}-{mtime}")
+
+        return response.make_conditional(request)
+
+
+@app.route("/api/post/<int:post_id>/like", methods=['POST'])
+@api_or_login_required
+def like_post_api(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
+
+        already_liked = db_sess.query(Like).filter(
+            Like.user_id == g.api_user.id,
+            Like.post_id == post_id
+        ).first()
+
+        if already_liked:
+            db_sess.delete(already_liked)
+            action = 'unliked'
+        else:
+            new_like = Like(user=db_sess.merge(g.api_user), post=post)
+            db_sess.add(new_like)
+            action = 'liked'
+
+        db_sess.commit()
+
+        likes_count = db_sess.query(Like).filter(Like.post_id == post_id).count()
+
+    return jsonify({'status': 'ok', 'action': action, 'likes_count': likes_count})
+
+
+@app.route("/api/post/<int:post_id>/delete", methods=['POST'])
+@api_or_login_required
+def delete_post_api(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            return jsonify({'status': 'error', 'message': 'Post not found or already deleted'}), 404
+        if post.author_id != g.api_user.id:
+            return jsonify({'status': 'error', 'message': 'Post does not belong to you'}), 403
+
+        likes = db_sess.query(Like).filter(Like.post_id == post_id).all()
+        for like in likes:
+            db_sess.delete(like)
+
+        meme = db_sess.get(Meme, post.meme_id)
+
+        for path in [meme.source_path, meme.result_path]:
+            if path and os.path.exists(path):
+                os.remove(path)
+
+        db_sess.delete(meme)
+        db_sess.delete(post)
+
+        db_sess.commit()
+
+        return jsonify({'status': 'ok'})
+
+
+# ===
+
+@app.route("/my-api/get-key")
+@login_required
+def generate_user_api_key():
+    with db_session.create_session() as db_sess:
+        raw_api_key = current_user.generate_api_key()
+
+        db_sess.merge(current_user)
+        db_sess.commit()
+
+        return render_template('api_new_key.html', api_key=raw_api_key)
+
+
+@app.route("/my-api/get-key/force-trying")
+@login_required
+def get_user_api_key():
+    with db_session.create_session() as db_sess:
+        raw_api_key = current_user.generate_api_key()
+
+        if db_sess.get(User, current_user.id).hashed_api_key:
+            return render_template('api_reject_key.html')
+
+        db_sess.merge(current_user)
+        db_sess.commit()
+
+        return render_template('api_new_key.html', api_key=raw_api_key)
 
 
 # ====== Pages ======
@@ -78,7 +367,7 @@ def meme_picture(meme_id):
 @app.route('/')
 def index():
     with db_session.create_session() as db_sess:
-        posts = db_sess.query(Post).all()
+        posts = db_sess.query(Post).order_by(Post.created_date.desc()).all()
         return render_template('index.html', posts=posts)
 
 
@@ -98,10 +387,17 @@ def register():
                 nickname=form.nickname.data,
                 username=form.username.data,
                 about=form.about.data,
-                picture=form.picture.data.read()
             )
-            user.set_password(form.password.data)
             db_sess.add(user)
+            db_sess.flush()
+
+            if pic_data := form.picture.data.read():
+                avatar_path = os.path.join('static', 'avatars', f'user{user.id}.jpg')
+                with open(avatar_path, 'wb') as avatar:
+                    avatar.write(pic_data)
+                user.picture = avatar_path
+
+            user.set_password(form.password.data)
             db_sess.commit()
             login_user(user, remember=form.remember_me.data)
             return redirect('/')
@@ -115,7 +411,6 @@ def login():
     if form.validate_on_submit():
         with db_session.create_session() as db_sess:
             user = db_sess.query(User).filter(User.username == form.username.data).first()
-            db_sess.close()
             if user and user.check_password(form.password.data):
                 login_user(user, remember=form.remember_me.data)
                 return redirect("/")
@@ -142,13 +437,17 @@ def profile():
 
 
 @app.route('/profile/<int:user_id>')
+@app.route('/profile/<user_id>')
 def someones_profile(user_id):
     with db_session.create_session() as db_sess:
-        user = db_sess.get(User, user_id)
+        if isinstance(user_id, int):
+            user = db_sess.get(User, user_id)
+        else:
+            user = db_sess.query(User).filter(User.username == user_id).first()
         if not user:
             abort(404)
 
-        is_owner = current_user.is_authenticated and user_id == current_user.id
+        is_owner = current_user.is_authenticated and user.id == current_user.id
 
         return render_template('profile.html', title='Профиль', user=user, is_owner=is_owner)
 
@@ -167,7 +466,12 @@ def edit_profile():
             current_user.username = form.username.data or current_user.username
             current_user.about = form.about.data or current_user.about
             current_user.nickname = form.nickname.data or current_user.nickname
-            current_user.picture = form.picture.data.read() or current_user.picture
+
+            if pic_data := form.picture.data.read():
+                avatar_path = os.path.join('static', 'avatars', f'user{current_user.id}.jpg')
+                with open(avatar_path, 'wb') as avatar:
+                    avatar.write(pic_data)
+                current_user.picture = avatar_path or current_user.picture
 
             db_sess.merge(current_user)
 
@@ -226,7 +530,7 @@ def create_meme():
         form=form)
 
 
-@app.route('/meme/upload/<int:meme_id>', methods=['GET', 'POST'])
+@app.route('/meme/<int:meme_id>/upload', methods=['GET', 'POST'])
 @login_required
 def upload_meme(meme_id):
     with (db_session.create_session() as db_sess):
@@ -271,7 +575,10 @@ def main():
         with db_session.create_session() as db_sess:
             return db_sess.get(User, user_id)
 
-    app.run()
+    host = '0.0.0.0' if os.getenv('HOST') else '127.0.0.1'
+    port = int(os.getenv('PORT', 5000))
+
+    app.run(host=host, port=port)
 
 
 if __name__ == '__main__':
