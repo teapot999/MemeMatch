@@ -1,10 +1,11 @@
 import sqlalchemy as sa
 from sqlalchemy import orm
+from sqlalchemy_serializer import SerializerMixin
 
 from .db_session import SqlAlchemyBase
 
 
-class Meme(SqlAlchemyBase):
+class Meme(SqlAlchemyBase, SerializerMixin):
     __tablename__ = 'memes'
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)

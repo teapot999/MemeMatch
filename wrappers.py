@@ -95,3 +95,19 @@ def api_or_login_required(func):
         }), 401
 
     return wrapper
+
+
+def internal_api_only(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        fetch_site = request.headers.get('Sec-Fetch-Site')
+
+        if fetch_site != 'same-origin':
+            return jsonify({
+                'status': 'error',
+                'message': 'Forbidden. This API endpoint is reserved for internal application use only.'
+            }), 418
+
+        return func(*args, **kwargs)
+
+    return wrapper

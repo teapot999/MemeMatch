@@ -3,5 +3,3 @@
 .env
 alembic.ini
 alembic
-static/avatars
-static/uploads
