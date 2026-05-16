@@ -137,123 +137,116 @@ def meme_picture(meme_id):
 
 # === API ===
 
-@app.route('/api/user/<int:user_id>')
+def clear_crashed_bytes(dct):
+    for k, v in dct.items():
+        if isinstance(v, dict):
+            dct[k] = clear_crashed_bytes(v)
+        if not isinstance(v, str):
+            continue
+        dct[k] = v.encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
+    return dct
+
+
+@app.route('/api/<entity_type>/s')
 @api_or_login_required
-def get_user_api(user_id):
+def get_entities_list_api(entity_type):
     with db_session.create_session() as db_sess:
-        user = db_sess.get(User, user_id)
-        if not user:
-            return jsonify({'status': 'error', 'message': 'The user is a lie'}), 404
+        match entity_type:
+            case 'user':
+                ids = db_sess.scalars(select(User.id).order_by(User.id)).all()
+            case 'post':
+                ids = db_sess.scalars(select(Post.id).order_by(Post.created_date.desc())).all()
+            case 'meme':
+                ids = db_sess.scalars(select(Meme.id).order_by(Meme.id.desc())).all()
+            case _:
+                return jsonify({'status': 'error',
+                                'message': f'Unknown entity type: {entity_type}. Allowed: user, post, meme.'}), 400
 
-        user_data = user.to_dict(only=['id', 'username', 'nickname', 'about'])
-        for item in ['username', 'nickname', 'about']:
-            user_data[item] = user_data[item].encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
-
-        return jsonify({'status': 'ok', **user_data})
+        return jsonify({'status': 'ok', 'count': len(ids), f'entity_ids': ids, 'type': entity_type})
 
 
-@app.route('/api/user/<int:user_id>/picture')
+@app.route('/api/<entity_type>/<int:entity_id>')
 @api_or_login_required
-def get_user_avatar_api(user_id):
+def get_entity_api(entity_type, entity_id):
     with db_session.create_session() as db_sess:
-        user = db_sess.get(User, user_id)
+        match entity_type:
+            case 'user':
+                obj = db_sess.get(User, entity_id)
+                if not obj:
+                    return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-        if not user:
-            return jsonify({'status': 'error', 'message': 'The user is a lie'}), 404
+                params = ['id', 'username', 'nickname', 'about', 'created_date']
 
-        if not user.picture:
-            directory = os.path.join(app.root_path, 'static', 'img')
-            filename = 'default_avatar.jpg'
-            full_file_path = os.path.join(directory, filename)
+                user_posts = db_sess.scalars(select(Post.id).filter(Post.author_id == entity_id)).all()
+                user_has_avatar = obj.picture is not None
+                additional = {'posts': user_posts, 'picture': user_has_avatar}
+            case 'meme':
+                obj = db_sess.get(Meme, entity_id)
+                params = ['id', 'parent_meme_id', 'user_id', 'post_id', 'meta']
+                additional = {}
+            case 'post':
+                obj = db_sess.get(Post, entity_id)
+                if not obj:
+                    return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-            if not os.path.exists(full_file_path):
-                return jsonify({'status': 'error', 'message': "The user's avatar is a lie"}), 404
+                params = ['id', 'title', 'description', 'created_date', 'author_id',
+                          'matches_from_this', 'match_result']
 
-            response = send_from_directory(directory, filename)
-            mtime = os.path.getmtime(full_file_path)
+                post_likes = db_sess.scalars(
+                    select(Like.user_id).filter(Like.post_id == entity_id).order_by(Like.user_id)).all()
+                post_meme_id = obj.meme.id if obj.meme else None
+                additional = {'likes': post_likes, 'meme_id': post_meme_id}
+            case _:
+                return jsonify({'status': 'error',
+                                'message': f'Unknown entity type: {entity_type}. Allowed types: user, post, meme.'}), 400
+        if not obj:
+            return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
-            response.set_etag(f"user-default-{mtime}")
-            return response.make_conditional(request)
+        data = clear_crashed_bytes(obj.to_dict(only=params))
+        data.update(additional)
 
-        clean_path = user.picture.replace('\\', '/')
-        directory = os.path.join(app.root_path, os.path.dirname(clean_path))
-        filename = os.path.basename(clean_path)
-
-        full_file_path = os.path.join(directory, filename)
-        if not os.path.exists(full_file_path):
-            return jsonify({'status': 'error', 'message': 'User does not set a picture of him.'}), 404
-
-        response = send_from_directory(directory, filename)
-        mtime = os.path.getmtime(full_file_path)
-
-        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
-        response.set_etag(f"user-{user_id}-{mtime}")
-
-        return response.make_conditional(request)
+        return jsonify({'status': 'ok', **data})
 
 
-@app.route('/api/post/<int:post_id>')
+@app.route('/api/<entity_type>/<int:entity_id>/picture')
 @api_or_login_required
-def get_post_api(post_id):
+def get_entity_picture_api(entity_type, entity_id):
     with db_session.create_session() as db_sess:
-        post = db_sess.get(Post, post_id)
-        if not post:
-            return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
+        match entity_type:
+            case 'user':
+                obj = db_sess.get(User, entity_id)
+                if not obj:
+                    return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-        post_data = post.to_dict(only=[
-            'id', 'title', 'description', 'created_date', 'author_id', 'meme_id',
-            'matches_from_this', 'match_result'])
-        for item in ['title', 'description']:
-            post_data[item] = post_data[item].encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
+                pic_path = obj.picture
+            case 'meme':
+                obj = db_sess.get(Meme, entity_id)
+                if not obj:
+                    return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-        post_likes = db_sess.scalars(select(Like.id).filter(Like.post_id == post_id)).all()
-        post_data.update({'likes': post_likes})
+                pic_path = obj.result_path
+            case 'post':
+                post = db_sess.get(Post, entity_id)
+                if not post:
+                    return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-        return jsonify({'status': 'ok', **post_data})
+                obj = post.meme
+                pic_type = request.args.get('type', 'result')
+                match pic_type:
+                    case 'source':
+                        pic_path = obj.source_path
+                    case 'result':
+                        pic_path = obj.result_path
+                    case _:
+                        return jsonify({'status': 'error',
+                                        'message': f'Invalid value of parameter "type": {pic_type}. Supported types : source, result.'}), 400
+            case _:
+                return jsonify({'status': 'error',
+                                'message': f'Unknown entity type: {entity_type}. Allowed types: user, post, meme.'}), 400
+        if not pic_path:
+            return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-
-@app.route('/api/post/<int:_id>/meme')
-@app.route('/api/meme/<int:_id>')
-@api_or_login_required
-def get_post_meme_api(_id):
-    with db_session.create_session() as db_sess:
-        if request.path.startswith('/api/post'):
-            post = db_sess.get(Post, _id)
-            if not post:
-                return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
-            meme = post.meme
-        else:
-            meme = db_sess.get(Meme, _id)
-
-        if not meme:
-            return jsonify({'status': 'error', 'message': 'The meme is a lie'}), 404
-
-        meme_data = meme.to_dict(only=['id', 'parent_meme_id', 'user_id'])
-
-        meta = meme.meta
-        for k, v in meta.items():
-            if not isinstance(v, str):
-                continue
-            meta[k] = v.encode('utf-16', 'surrogatepass').decode('utf-16', 'ignore')
-        meme_data.update({'meta': meta})
-
-        return jsonify({'status': 'ok', **meme_data})
-
-
-@app.route('/api/post/<int:post_id>/meme/picture')
-@api_or_login_required
-def get_post_meme_picture_api(post_id):
-    with db_session.create_session() as db_sess:
-        post = db_sess.get(Post, post_id)
-        if not post:
-            return jsonify({'status': 'error', 'message': 'The post is a lie'}), 404
-
-        meme = post.meme
-        if not meme or not meme.result_path:
-            return jsonify({'status': 'error', 'message': 'The meme is a lie'}), 404
-
-        clean_path = meme.result_path.replace('\\', '/')
+        clean_path = pic_path.replace('\\', '/')
 
         if clean_path.startswith('static/'):
             clean_path = clean_path.replace('static/', '', 1)
@@ -261,7 +254,8 @@ def get_post_meme_picture_api(post_id):
         full_file_path = os.path.join(app.root_path, 'static', clean_path)
 
         if not os.path.exists(full_file_path):
-            return jsonify({'status': 'error', 'message': 'The meme file is a lie'}), 404
+            return jsonify(
+                {'status': 'error', 'message': f'There is no file satisfied at {entity_type} №{entity_id}.'}), 404
 
         response = send_from_directory(os.path.join(app.root_path, 'static'), clean_path)
 
@@ -272,12 +266,12 @@ def get_post_meme_picture_api(post_id):
         mtime = os.path.getmtime(full_file_path)
 
         response.headers['Cache-Control'] = 'no-cache, must-revalidate'
-        response.set_etag(f"meme-{meme.id}-{mtime}")
+        response.set_etag(f"meme-{entity_type}-{entity_id}-{mtime}")
 
         return response.make_conditional(request)
 
 
-@app.route("/api/post/<int:post_id>/like", methods=['POST'])
+@app.route("/api/post/<int:post_id>/like", methods=['PUT'])
 @api_or_login_required
 def like_post_api(post_id):
     with db_session.create_session() as db_sess:
@@ -305,27 +299,29 @@ def like_post_api(post_id):
     return jsonify({'status': 'ok', 'action': action, 'likes_count': likes_count})
 
 
-@app.route("/api/post/<int:post_id>/delete", methods=['POST'])
+@app.route("/api/post/<int:post_id>", methods=['DELETE'])
 @api_or_login_required
 def delete_post_api(post_id):
     with db_session.create_session() as db_sess:
         post = db_sess.get(Post, post_id)
         if not post:
             return jsonify({'status': 'error', 'message': 'Post not found or already deleted'}), 404
-        if post.author_id != g.api_user.id:
+        if post.author_id != g.api_user.id and str(g.api_user.id) != os.getenv('ADMIN_ID'):
             return jsonify({'status': 'error', 'message': 'Post does not belong to you'}), 403
 
         likes = db_sess.query(Like).filter(Like.post_id == post_id).all()
         for like in likes:
             db_sess.delete(like)
 
-        meme = db_sess.get(Meme, post.meme_id)
+        meme = post.meme
 
-        for path in [meme.source_path, meme.result_path]:
-            if path and os.path.exists(path):
-                os.remove(path)
+        if meme:
+            for path in [meme.source_path, meme.result_path]:
+                if path and os.path.exists(path):
+                    os.remove(path)
 
-        db_sess.delete(meme)
+            db_sess.delete(meme)
+
         db_sess.delete(post)
 
         db_sess.commit()
@@ -539,7 +535,7 @@ def upload_meme(meme_id):
             abort(404)
 
         is_uploading_by_current_user = (meme.user_id == current_user.id)
-        is_published = db_sess.query(Post.meme_id).filter(Post.meme_id == meme_id).first() is not None
+        is_published = meme.post_id is not None
         if not is_uploading_by_current_user or is_published:
             abort(403)
 

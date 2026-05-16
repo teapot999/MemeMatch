@@ -15,7 +15,7 @@ load_dotenv()
 
 API_REQUEST_HISTORY = defaultdict(list)
 
-MAX_REQUESTS = 5
+MAX_REQUESTS = 30
 TIME_WINDOW = 10
 
 
@@ -74,7 +74,7 @@ def api_or_login_required(func):
             g.api_user = current_user
             return func(*args, **kwargs)
 
-        api_key = request.headers.get('X-API-Key')
+        api_key = request.headers.get('X-Api-Key')
         if api_key:
             hashed_api_key = hashlib.sha256(api_key.encode('utf-8')).hexdigest()
             with db_session.create_session() as db_sess:

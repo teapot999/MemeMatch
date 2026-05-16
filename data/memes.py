@@ -16,4 +16,5 @@ class Meme(SqlAlchemyBase, SerializerMixin):
 
     user_id = sa.Column(sa.Integer, sa.ForeignKey("users.id"))
     user = orm.relationship('User', back_populates='memes')
-    post = orm.relationship('Post', back_populates='meme', uselist=False)
+    post_id = sa.Column(sa.Integer, sa.ForeignKey("posts.id"), nullable=True)
+    post = orm.relationship('Post', back_populates='meme', foreign_keys=[post_id])

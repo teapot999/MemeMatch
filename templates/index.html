@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             try {
                 const response = await fetch(`/api/post/${postId}/like`, {
-                    method: 'POST',
+                    method: 'PUT',
                     headers: {'Content-Type': 'application/json'}
                 });
                 if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
@@ -75,8 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const postId = this.getAttribute('data-post-id');
             try {
-                const response = await fetch(`/api/post/${postId}/delete`, {
-                    method: 'POST',
+                const response = await fetch(`/api/post/${postId}`, {
+                    method: 'DELETE',
                     headers: {'Content-Type': 'application/json'}
                 });
                 if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);

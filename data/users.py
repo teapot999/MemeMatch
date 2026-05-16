@@ -42,6 +42,3 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
         self.hashed_api_key = hashlib.sha256(raw_key.encode('utf8')).hexdigest()
 
         return raw_key
-
-    def check_api_key(self, api_key):
-        return hashlib.sha256(api_key.encode('utf8')).hexdigest() == self.hashed_api_key
