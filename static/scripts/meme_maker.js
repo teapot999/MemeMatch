@@ -111,6 +111,7 @@ async function makeTextMeme(image, canvas, ctx, options) {
         ctx.lineWidth = fontSize / 30;
         ctx.textAlign = 'center';
         ctx.textBaseline = isTop ? 'top' : 'bottom';
+        ctx.lineJoin = 'round';
 
         ctx.fillText(resultText, canvas.width / 2, y);
         ctx.strokeText(resultText, canvas.width / 2, y);
@@ -283,6 +284,18 @@ async function makeMeme(imageSource, imagePreview, options) {
         canvas.height = currentSource.height;
         ctx.drawImage(currentSource, 0, 0);
     }
+
+    const watermarkText = 'MemeMatch';
+    const fontSize = getFontSize(ctx, watermarkText, canvas.width, 'Impact', 'bold');
+    ctx.font = `bold ${fontSize}px Impact`;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.lineWidth = fontSize / 30;
+    ctx.textAlign = 'right';
+
+    ctx.fillText(watermarkText, canvas.width - 20, canvas.height - 20);
+    ctx.strokeText(watermarkText, canvas.width - 20, canvas.height - 20);
 
     if (canvas.width > 1280) {
         const scale = 1280 / canvas.width;

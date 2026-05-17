@@ -132,6 +132,10 @@ def meme_picture(meme_id):
         response.headers['Cache-Control'] = 'no-cache, must-revalidate'
         response.set_etag(f"meme-{meme_id}-{mtime}")
 
+        if request.args.get('download'):
+            download_filename = f"MemeMatch-post-{meme_id}.jpg"
+            response.headers['Content-Disposition'] = f'attachment; filename="{download_filename}"'
+
         return response.make_conditional(request)
 
 

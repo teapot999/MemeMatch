@@ -27,7 +27,8 @@
             <a class="btn btn-warning" href="/post/{{ post.id }}/edit">📝</a>
             <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}" type="button">🗑️</button>
         {% endif %}
-        <a class="btn btn-outline-warning">⏬</a>
+        <a class="btn btn-outline-warning"
+           href="{{ url_for('meme_picture', meme_id=meme.id, download=True) }}">⏬</a>
         {% endif %}
         </div>
         <div class="border meme-content">
