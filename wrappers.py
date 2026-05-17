@@ -67,7 +67,7 @@ def is_rate_limited(user_id):
     return False
 
 
-def api_or_login_required(func):
+def api_or_login(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if current_user.is_authenticated:
@@ -97,17 +97,39 @@ def api_or_login_required(func):
     return wrapper
 
 
-def internal_api_only(func):
+def internal_api(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        fetch_site = request.headers.get('Sec-Fetch-Site')
-
-        if fetch_site != 'same-origin':
+        if not current_user.is_authenticated:
             return jsonify({
                 'status': 'error',
                 'message': 'Forbidden. This API endpoint is reserved for internal application use only.'
             }), 418
 
+        g.api_user = current_user
         return func(*args, **kwargs)
+
+    return wrapper
+
+
+def external_api(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key')
+        if not api_key:
+            return jsonify({'status': 'error', 'message': 'Missing X-API-Key header'}), 401
+
+        hashed_api_key = hashlib.sha256(api_key.encode('utf-8')).hexdigest()
+
+        with db_session.create_session() as db_sess:
+            user = db_sess.query(User).filter(User.hashed_api_key == hashed_api_key).first()
+            if not user:
+                return jsonify({'status': 'error', 'message': 'Invalid API Key'}), 401
+
+            if is_rate_limited(user.id):
+                return jsonify({'status': 'error', 'message': 'Too Many Requests'}), 429
+
+            g.api_user = user
+            return func(*args, **kwargs)
 
     return wrapper

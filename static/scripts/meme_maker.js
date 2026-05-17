@@ -293,6 +293,7 @@ async function makeMeme(imageSource, imagePreview, options) {
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.lineWidth = fontSize / 30;
     ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
 
     ctx.fillText(watermarkText, canvas.width - 20, canvas.height - 20);
     ctx.strokeText(watermarkText, canvas.width - 20, canvas.height - 20);

@@ -7,6 +7,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory, jsonify, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_wtf import CSRFProtect
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -17,7 +18,7 @@ from data.likes import Like
 from data.memes import Meme
 from data.posts import Post
 from data.users import User
-from wrappers import api_or_login_required, internal_api_only, current_user_only
+from wrappers import current_user_only, internal_api, external_api, api_or_login
 
 load_dotenv()
 
@@ -31,9 +32,12 @@ app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60 * 60 * 24 * 7
 app.json.ensure_ascii = False
 
+csrf = CSRFProtect(app)
+
 
 # === Error handler ===
 
+@app.errorhandler(400)
 @app.errorhandler(401)
 @app.errorhandler(403)
 @app.errorhandler(404)
@@ -44,6 +48,7 @@ app.json.ensure_ascii = False
 def error_handler(e):
     code = e.code
     titles = {
+        400: 'Невалидный запрос',
         401: 'Кто вы?',
         403: 'Доступ запрещён',
         404: 'Пофиг, потеряли',
@@ -62,7 +67,7 @@ def error_handler(e):
 # === In-app API ===
 
 @app.route('/user_avatar/<int:user_id>')
-@internal_api_only
+@internal_api
 def user_avatar(user_id):
     with db_session.create_session() as db_sess:
         user = db_sess.get(User, user_id)
@@ -103,15 +108,23 @@ def user_avatar(user_id):
 
 
 @app.route('/meme_picture/<int:meme_id>')
-@internal_api_only
+@internal_api
 def meme_picture(meme_id):
     with db_session.create_session() as db_sess:
         meme = db_sess.get(Meme, meme_id)
 
-        if not meme or not meme.result_path:
+        match request.args.get('type', 'result'):
+            case 'source':
+                meme_path = meme.source_path
+            case 'result':
+                meme_path = meme.result_path
+            case _:
+                abort(400)
+
+        if not meme or not meme_path:
             abort(404)
 
-        clean_path = meme.result_path.replace('\\', '/')
+        clean_path = meme_path.replace('\\', '/')
 
         if clean_path.startswith('static/'):
             clean_path = clean_path.replace('static/', '', 1)
@@ -152,7 +165,8 @@ def clear_crashed_bytes(dct):
 
 
 @app.route('/api/<entity_type>/s')
-@api_or_login_required
+@external_api
+@csrf.exempt
 def get_entities_list_api(entity_type):
     with db_session.create_session() as db_sess:
         match entity_type:
@@ -170,7 +184,8 @@ def get_entities_list_api(entity_type):
 
 
 @app.route('/api/<entity_type>/<int:entity_id>')
-@api_or_login_required
+@external_api
+@csrf.exempt
 def get_entity_api(entity_type, entity_id):
     with db_session.create_session() as db_sess:
         match entity_type:
@@ -213,7 +228,8 @@ def get_entity_api(entity_type, entity_id):
 
 
 @app.route('/api/<entity_type>/<int:entity_id>/picture')
-@api_or_login_required
+@external_api
+@csrf.exempt
 def get_entity_picture_api(entity_type, entity_id):
     with db_session.create_session() as db_sess:
         match entity_type:
@@ -228,7 +244,7 @@ def get_entity_picture_api(entity_type, entity_id):
                 if not obj:
                     return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-                pic_type = request.args.get('type')
+                pic_type = request.args.get('type', 'result')
                 match pic_type:
                     case 'source':
                         pic_path = obj.source_path
@@ -243,7 +259,7 @@ def get_entity_picture_api(entity_type, entity_id):
                     return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
                 obj = post.meme
-                pic_type = request.args.get('type')
+                pic_type = request.args.get('type', 'result')
                 match pic_type:
                     case 'source':
                         pic_path = obj.source_path
@@ -255,8 +271,11 @@ def get_entity_picture_api(entity_type, entity_id):
             case _:
                 return jsonify({'status': 'error',
                                 'message': f'Unknown entity type: {entity_type}. Allowed types: user, post, meme.'}), 400
+        if not obj:
+            return jsonify({'status': 'error', 'message': f'The {entity_type} #{entity_id} is a lie'}), 404
         if not pic_path:
-            return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
+            return jsonify(
+                {'status': 'error', 'message': f'The picture for the {entity_type} №{entity_id} is a lie'}), 404
 
         clean_path = pic_path.replace('\\', '/')
 
@@ -284,7 +303,8 @@ def get_entity_picture_api(entity_type, entity_id):
 
 
 @app.route("/api/post/<int:post_id>/like", methods=['PUT'])
-@api_or_login_required
+@api_or_login
+@csrf.exempt
 def like_post_api(post_id):
     with db_session.create_session() as db_sess:
         post = db_sess.get(Post, post_id)
@@ -312,7 +332,8 @@ def like_post_api(post_id):
 
 
 @app.route("/api/post/<int:post_id>", methods=['DELETE'])
-@api_or_login_required
+@api_or_login
+@csrf.exempt
 def delete_post_api(post_id):
     with db_session.create_session() as db_sess:
         post = db_sess.get(Post, post_id)
@@ -617,7 +638,11 @@ def edit_post(post_id):
 
             return redirect(url_for('upload_meme', meme_id=meme.id, editing=True))
 
-        return render_template('meme_editor.html', form=form, meme=meme)
+        return render_template('meme_editor.html',
+                               title='1. Редактирование мема',
+                               page_title='Редактирование мема',
+                               form=form,
+                               meme=meme)
 
 
 def main():
