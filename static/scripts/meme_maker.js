@@ -249,6 +249,8 @@ async function makeMeme(imageSource, imagePreview, options) {
     canvas.height = imageSource.naturalHeight;
     ctx.drawImage(imageSource, 0, 0);
 
+    const sourceDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
     let currentSource = imageSource;
 
     if (jackalType) {
@@ -295,6 +297,11 @@ async function makeMeme(imageSource, imagePreview, options) {
 
     const finalDataUrl = canvas.toDataURL('image/jpeg', 0.9);
     imagePreview.src = finalDataUrl;
+
+    const sourceInput = document.getElementById('meme-source-input');
+    if (sourceInput) {
+        sourceInput.value = sourceDataUrl;
+    }
 
     const resultInput = document.getElementById('meme-result-input');
     resultInput.value = finalDataUrl;

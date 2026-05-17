@@ -10,7 +10,7 @@
 <form action="" method="post" enctype="multipart/form-data" class="memefeed">
     {{ form.hidden_tag() }}
     <p>
-        {{ meme_card(meme, current_user) }}
+        {{ meme_card(meme, current_user, post, is_editing=True) }}
         <hr>
         <p>
             {{ form.title.label(class="text") }}<br>

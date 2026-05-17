@@ -1,4 +1,4 @@
-{% macro meme_card(meme, current_user, post=None) %}
+{% macro meme_card(meme, current_user, post=None, is_editing=False) %}
 <div {% if post %} id="post-{{ post.id }}" {% endif %} class="border meme-card">
     {% set user, auth, is_admin = meme.user, current_user.is_authenticated, current_user.is_authenticated and current_user.id == 1 %}
     <div class="memeheader">
@@ -15,17 +15,17 @@
     </div>
     <div class="memebody">
         <div class="control-buttons column">
-        {% if post %}
+        {% if post and not is_editing %}
         {% if is_admin %}
             {% if user.id == 1 %}
             <a class="btn btn-warning" href="/post/{{ post.id }}/edit">📝</a>
             {% else %}
             <a class="btn btn-dark" href="/post/{{ post.id }}/block-author">🚫</a>
             {% endif %}
-            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}">🗑️️</button>
+            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}" type="button">🗑️️</button>
         {% elif auth and user and user.id == current_user.id %}
             <a class="btn btn-warning" href="/post/{{ post.id }}/edit">📝</a>
-            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}">🗑️</button>
+            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}" type="button">🗑️</button>
         {% endif %}
         <a class="btn btn-outline-warning">⏬</a>
         {% endif %}
@@ -37,8 +37,9 @@
             </p>
         </div>
         <div class="control-buttons column">
-            {% if post %}
-            <button class="btn btn-{% if current_user.id not in post.likes|map(attribute='user_id') %}outline-{% endif %}danger like-btn" data-post-id="{{ post.id }}">❤️</button>
+            {% if post and not is_editing %}
+            <button class="btn btn-{% if post and current_user.id not in post.likes|map(attribute='user_id') %}outline-{% endif %}danger like-btn"
+                    data-post-id="{{ post.id if post else '' }}" type="button">❤️</button>
             <a class="btn btn-success" href="/post/{{ post.id }}/match">🔀</a>
             {% endif %}
         </div>

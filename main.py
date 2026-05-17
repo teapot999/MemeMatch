@@ -17,7 +17,7 @@ from data.likes import Like
 from data.memes import Meme
 from data.posts import Post
 from data.users import User
-from wrappers import api_or_login_required, internal_api_only
+from wrappers import api_or_login_required, internal_api_only, current_user_only
 
 load_dotenv()
 
@@ -224,14 +224,22 @@ def get_entity_picture_api(entity_type, entity_id):
                 if not obj:
                     return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-                pic_path = obj.result_path
+                pic_type = request.args.get('type')
+                match pic_type:
+                    case 'source':
+                        pic_path = obj.source_path
+                    case 'result':
+                        pic_path = obj.result_path
+                    case _:
+                        return jsonify({'status': 'error',
+                                        'message': f'Invalid value of parameter "type": {pic_type}. Supported types : source, result.'}), 400
             case 'post':
                 post = db_sess.get(Post, entity_id)
                 if not post:
                     return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
                 obj = post.meme
-                pic_type = request.args.get('type', 'result')
+                pic_type = request.args.get('type')
                 match pic_type:
                     case 'source':
                         pic_path = obj.source_path
@@ -536,28 +544,76 @@ def upload_meme(meme_id):
 
         is_uploading_by_current_user = (meme.user_id == current_user.id)
         is_published = meme.post_id is not None
-        if not is_uploading_by_current_user or is_published:
+        is_editing = request.args.get('editing')
+        if not is_uploading_by_current_user or is_published and not is_editing:
             abort(403)
+
+        current_post = None
+        if is_published:
+            current_post = db_sess.query(Post).filter(Post.id == meme.post_id).first()
 
         form = forms.meme.UploadingForm()
         if form.validate_on_submit():
-            post = Post(
-                user=db_sess.merge(current_user),
-                meme=meme,
-                title=form.title.data,
-                description=form.descr.data)
-            db_sess.add(post)
+            if is_editing and current_post:
+                current_post.title = form.title.data
+                current_post.description = form.descr.data
+                db_sess.merge(current_post)
+            else:
+                post = Post(
+                    user=db_sess.merge(current_user),
+                    meme=meme,
+                    title=form.title.data,
+                    description=form.descr.data)
+                db_sess.add(post)
             db_sess.commit()
 
             return redirect('/')
 
-    return render_template(
-        'meme_uploader.html',
-        page_title='Создание мема',
-        title='2. Выкладывание мема',
-        form=form,
-        meme=meme
-    )
+        if is_editing and request.method == 'GET':
+            form.title.data = current_post.title
+            form.descr.data = current_post.description
+
+        return render_template(
+            'meme_uploader.html',
+            page_title='Создание мема',
+            title='2. Выкладывание мема',
+            form=form,
+            meme=meme,
+            post=current_post,
+        )
+
+
+# === Posts ===
+
+@app.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
+@current_user_only(Post, url_param='post_id')
+def edit_post(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            abort(404)
+
+        meme = post.meme
+        if not meme:
+            abort(404)
+
+        form = forms.meme.EditingForm()
+        if form.validate_on_submit():
+            meme.meta = json.loads(request.form.get('meme_meta', '{}'))
+            db_sess.merge(meme)
+
+            meme_result_data = request.form.get('meme_result')
+            if meme_result_data:
+                _, b64picture = meme_result_data.split(',', 1)
+                meme_result = base64.b64decode(b64picture)
+                with open(meme.result_path, 'wb') as result:
+                    result.write(meme_result)
+
+            db_sess.commit()
+
+            return redirect(url_for('upload_meme', meme_id=meme.id, editing=True))
+
+        return render_template('meme_editor.html', form=form, meme=meme)
 
 
 def main():

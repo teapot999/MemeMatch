@@ -37,7 +37,7 @@ def current_user_only(model, url_param='id'):
             if item_id is None:
                 return abort(404)
 
-            with (db_session.create_session() as db_sess):
+            with db_session.create_session() as db_sess:
                 item = db_sess.get(model, item_id)
                 if item is None:
                     return abort(404)

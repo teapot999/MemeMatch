@@ -1,28 +1,31 @@
 {% extends "base.html" %}
 
+{% set meta = meme.meta %}
+
 {% block content %}
 <form action="" method="post" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     <p>
-        <p>
-            {{ form.picture.label }}<br>
-            {{ form.picture(class="form-control", type="file", onchange="previewMeme(this); makeMemeFromData();") }}<br>
-            {% for error in form.picture.errors %}
-                <p class="alert alert-danger" role="alert">
-                    {{ error }}
-                </p>
-            {% endfor %}
-        </p>
-        <img id="meme-source" src="" alt="" style="display: none">
-        <img id="meme-preview" src="" alt="" class="meme" style="width: 50%">
+<!--        <p>-->
+<!--&lt;!&ndash;            <img src="{{ url_for('get_entity_picture_api', entity_type='meme', entity_id=meme.id, type='result') }}" alt="" id="picture">&ndash;&gt;-->
+<!--        </p>-->
+        <img id="meme-source" src="{{ url_for('get_entity_picture_api', entity_type='meme', entity_id=meme.id, type='source') }}" alt="" style="display: none">
+        <img id="meme-preview" src="{{ url_for('get_entity_picture_api', entity_type='meme', entity_id=meme.id, type='result') }}" alt="" class="meme" style="width: 50%">
+        <input id="meme-source-input" type="hidden" name="meme_source">
         <input id="meme-result-input" type="hidden" name="meme_result">
         <input id="meme-meta-input" type="hidden" name="meme_meta">
         <hr>
         <!--text-->
-        <p>{{ form.text(id="text-toggler", disabled=True, onchange="makeMemeFromData()") }} {{ form.text.label }}</p>
+        <p>{{ form.text(id="text-toggler",
+                        checked=meta.get('textType', False),
+                        onchange="makeMemeFromData()") }} {{ form.text.label }}</p>
         <p>
             {{ form.text_top.label(class="text") }}<br>
-            {{ form.text_top(class="form-control text", id="topText", oninput="makeMemeFromData()") }}
+            {{ form.text_top(id="topText",
+                             class="form-control text",
+                             oninput="makeMemeFromData()",
+                             value=meta.get('topText', '')
+            ) }}
             {% for error in form.text_top.errors %}
                 <p class="alert alert-danger" role="alert">
                     {{ error }}
@@ -31,7 +34,11 @@
         </p>
         <p>
             {{ form.text_bottom.label(class="text") }}<br>
-            {{ form.text_bottom(class="form-control text", id="bottomText", oninput="makeMemeFromData()") }}
+            {{ form.text_bottom(id="bottomText",
+                                class="form-control text",
+                                oninput="makeMemeFromData()",
+                                value=meta.get('bottomText', '')
+            ) }}
             {% for error in form.text_bottom.errors %}
                 <p class="alert alert-danger" role="alert">
                     {{ error }}
@@ -40,10 +47,16 @@
         </p>
         <hr>
         <!--jackal-->
-        <p>{{ form.jackal(id="jackal-toggler", disabled=True, onchange="makeMemeFromData()") }} {{ form.jackal.label }}</p>
+        <p>{{ form.jackal(id="jackal-toggler",
+                          checked=meta.get('jackalType', False),
+                          onchange="makeMemeFromData()") }} {{ form.jackal.label }}</p>
         <p>
             {{ form.jackal_degree.label(class="jackal") }}<br>
-            {{ form.jackal_degree(class="form-control jackal", id="jackalDegree", onchange="makeMemeFromData()") }}
+            {{ form.jackal_degree(id="jackalDegree",
+                                  class="form-control jackal",
+                                  onchange="makeMemeFromData()",
+                                  value=meta.get('jackalDegree', form.jackal_degree.default)
+            ) }}
             {% for error in form.jackal_degree.errors %}
                 <p class="alert alert-danger" role="alert">
                     {{ error }}
@@ -52,10 +65,16 @@
         </p>
         <hr>
         <!--demik-->
-        <p>{{ form.demik(id="demik-toggler", disabled=True, onchange="makeMemeFromData()") }} {{ form.demik.label }}</p>
+        <p>{{ form.demik(id="demik-toggler",
+                         checked=meta.get('demikType', False),
+                         onchange="makeMemeFromData()") }} {{ form.demik.label }}</p>
         <p>
             {{ form.demik_top_text.label(class="demik") }}<br>
-            {{ form.demik_top_text(class="form-control demik", id="demikTopText", oninput="makeMemeFromData()") }}
+            {{ form.demik_top_text(id="demikTopText",
+                                   class="form-control demik",
+                                   oninput="makeMemeFromData()",
+                                   value=meta.get('demikTopText', form.demik_top_text.default)
+            ) }}
             {% for error in form.demik_top_text.errors %}
                 <p class="alert alert-danger" role="alert">
                     {{ error }}
@@ -64,7 +83,11 @@
         </p>
         <p>
             {{ form.demik_bottom_text.label(class="demik") }}<br>
-            {{ form.demik_bottom_text(class="form-control demik", id="demikBottomText", oninput="makeMemeFromData()") }}
+            {{ form.demik_bottom_text(id="demikBottomText",
+                                      class="form-control demik",
+                                      oninput="makeMemeFromData()",
+                                      value=meta.get('demikBottomText', form.demik_bottom_text.default)
+            ) }}
             {% for error in form.demik_bottom_text.errors %}
                 <p class="alert alert-danger" role="alert">
                     {{ error }}
@@ -73,7 +96,11 @@
         </p>
         <p>
             {{ form.demik_border_width.label(class="demik") }}<br>
-            {{ form.demik_border_width(class="form-control demik", id="demikBorder", onchange="makeMemeFromData()") }}
+            {{ form.demik_border_width(id="demikBorder",
+                                       class="form-control demik",
+                                       onchange="makeMemeFromData()",
+                                       value=meta.get('demikBorder', form.demik_border_width.default)
+            ) }}
             {% for error in form.demik_border_width.errors %}
                 <p class="alert alert-danger" role="alert">
                     {{ error }}
@@ -82,7 +109,11 @@
         </p>
         <p>
             {{ form.demik_outline_width.label(class="demik") }}<br>
-            {{ form.demik_outline_width(class="form-control demik", id="demikOutline", onchange="makeMemeFromData()") }}
+            {{ form.demik_outline_width(id="demikOutline",
+                                        class="form-control demik",
+                                        onchange="makeMemeFromData()",
+                                        value=meta.get('demikOutline', form.demik_outline_width.default)
+            ) }}
             {% for error in form.demik_outline_width.errors %}
                 <p class="alert alert-danger" role="alert">
                     {{ error }}
@@ -90,12 +121,13 @@
             {% endfor %}
         </p>
     </p>
-    <p>{{form.create(type="submit", class="btn btn-primary") }}</p>
+    <p>{{form.save(type="submit", class="btn btn-primary") }}</p>
     {{message}}
 </form>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='scripts/meme_maker.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const text_toggler = document.getElementById('text-toggler');
@@ -149,8 +181,11 @@
 
         updateState();
     })
+
+    window.addEventListener('load', function() {
+    makeMemeFromData();
+});
 </script>
-<script src="{{ url_for('static', filename='scripts/meme_maker.js') }}"></script>
 <script>
     let timeout;
 
@@ -180,5 +215,8 @@
             await makeMeme(imageSource, imagePreview, params);
         }, 169)
     }
+</script>
+<script>
+
 </script>
 {% endblock %}

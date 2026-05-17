@@ -120,8 +120,13 @@ response = requests.get(url, headers=headers)
 
 Формат ответа: фотография в формате `.jpg`, ограничение по размеру – 1.6 Мб.
 
+![Пример ответа](/static/avatars/user1.jpg)
 > Если пользователь не установил свою аватарку, вернётся дефолтная аватарка.
 
+Пример запроса (пользователя с таким ID не существует):
+[GET] `http://127.0.0.1:5000/api/user/0/picture`
+
+![Пример ответа](/static/img/default_avatar.jpg)
 ### Сущность типа `post`
 
 Представляет собой пост (публикацию), размещённую в MemeMatch. Отдаёт поля:
@@ -171,6 +176,7 @@ response = requests.get(url, headers=headers)
     - `result` – полученное в ходе встроенной в MemeMatch обработки изображение
 
 Формат ответа: фотография в формате `.jpg`, ограничение по размеру – 3.2 Мб.
+![Пример ответа](/static/uploads/sources/user1-meme21.jpg)
 
 ### Сущность типа `meme`
 
@@ -229,7 +235,7 @@ response = requests.get(url, headers=headers)
 
 #### Получение картинки (исходной или итоговой картинки мема)
 
-Пример запроса: [GET] `http://127.0.0.1:5000/api/meme/11/picture?type=source`
+Пример запроса: [GET] `http://127.0.0.1:5000/api/meme/21/picture?type=result`
 
 Параметры запроса:
 
@@ -238,6 +244,7 @@ response = requests.get(url, headers=headers)
     - `result` – полученное в ходе встроенной в MemeMatch обработки изображение
 
 Формат ответа: фотография в формате `.jpg`, ограничение по размеру – 3.2 Мб.
+![Пример ответа](/static/uploads/results/user1-meme21.jpg)
 
 ---
 
