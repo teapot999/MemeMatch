@@ -45,7 +45,10 @@ def current_user_only(model, url_param='id'):
                 owner_id = item.id if hasattr(item, 'hashed_password') else \
                     getattr(item, 'user_id', getattr(item, 'author_id', None))
 
-                if not current_user.is_authenticated or current_user.id != owner_id:
+                if not current_user.is_authenticated:
+                    return abort(401)
+
+                if current_user.id != owner_id:
                     return abort(403)
 
             return func(*args, **kwargs)
@@ -91,28 +94,12 @@ def api_or_login(func):
 
         return jsonify({
             'status': 'error',
-            'message': 'Unauthorized. Provide a valid X-API-Key header or log in.'
-        }), 401
+            'message': 'Unauthorized. Provide a valid X-API-Key header or log in.'}), 401
 
     return wrapper
 
 
-def internal_api(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return jsonify({
-                'status': 'error',
-                'message': 'Forbidden. This API endpoint is reserved for internal application use only.'
-            }), 418
-
-        g.api_user = current_user
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
-def external_api(func):
+def api_only(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         api_key = request.headers.get('X-API-Key')

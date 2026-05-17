@@ -12,7 +12,7 @@
     <hr>
     {% for post in posts %}
         {{ meme_card(post.meme, current_user, post) }}
-        <br>
+        <br id="sep-{{ post.id }}">
     {% endfor %}
     <hr>
     <h3>Мемы закончились =(</h3>
@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         post.remove();
                     }, 500);
+                    document.getElementById(`sep-${postId}`).remove();
                 }
             } catch (error) {
                 console.error(`Error deleting post ${postId}:`, error);

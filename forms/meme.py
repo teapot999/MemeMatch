@@ -60,7 +60,7 @@ class EditingForm(FlaskForm):
         NumberRange(1, 10)
     ])
 
-    save = SubmitField('Сохранить изменения')
+    save = SubmitField('Сохранить')
 
 
 class UploadingForm(FlaskForm):

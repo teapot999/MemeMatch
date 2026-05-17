@@ -15,10 +15,11 @@ import forms.meme
 import forms.user
 from data import db_session
 from data.likes import Like
+from data.matches import Match
 from data.memes import Meme
 from data.posts import Post
 from data.users import User
-from wrappers import current_user_only, internal_api, external_api, api_or_login
+from wrappers import current_user_only, api_only, api_or_login
 
 load_dotenv()
 
@@ -67,7 +68,6 @@ def error_handler(e):
 # === In-app API ===
 
 @app.route('/user_avatar/<int:user_id>')
-@internal_api
 def user_avatar(user_id):
     with db_session.create_session() as db_sess:
         user = db_sess.get(User, user_id)
@@ -108,7 +108,6 @@ def user_avatar(user_id):
 
 
 @app.route('/meme_picture/<int:meme_id>')
-@internal_api
 def meme_picture(meme_id):
     with db_session.create_session() as db_sess:
         meme = db_sess.get(Meme, meme_id)
@@ -165,7 +164,7 @@ def clear_crashed_bytes(dct):
 
 
 @app.route('/api/<entity_type>/s')
-@external_api
+@api_only
 @csrf.exempt
 def get_entities_list_api(entity_type):
     with db_session.create_session() as db_sess:
@@ -184,7 +183,7 @@ def get_entities_list_api(entity_type):
 
 
 @app.route('/api/<entity_type>/<int:entity_id>')
-@external_api
+@api_only
 @csrf.exempt
 def get_entity_api(entity_type, entity_id):
     with db_session.create_session() as db_sess:
@@ -228,7 +227,7 @@ def get_entity_api(entity_type, entity_id):
 
 
 @app.route('/api/<entity_type>/<int:entity_id>/picture')
-@external_api
+@api_only
 @csrf.exempt
 def get_entity_picture_api(entity_type, entity_id):
     with db_session.create_session() as db_sess:
@@ -338,31 +337,41 @@ def delete_post_api(post_id):
     with db_session.create_session() as db_sess:
         post = db_sess.get(Post, post_id)
         if not post:
+            if current_user.is_authenticated:
+                abort(404)
             return jsonify({'status': 'error', 'message': 'Post not found or already deleted'}), 404
         if post.author_id != g.api_user.id and str(g.api_user.id) != os.getenv('ADMIN_ID'):
+            if current_user.is_authenticated:
+                abort(403)
             return jsonify({'status': 'error', 'message': 'Post does not belong to you'}), 403
+
+        meme = post.meme
+
+        if meme.source_path:
+            source_usage_count = db_sess.query(Meme).filter(Meme.source_path == meme.source_path).count()
+            if source_usage_count <= 1 and os.path.exists(meme.source_path):
+                os.remove(meme.source_path)
+
+        if meme.result_path:
+            if os.path.exists(meme.result_path):
+                os.remove(meme.result_path)
 
         likes = db_sess.query(Like).filter(Like.post_id == post_id).all()
         for like in likes:
             db_sess.delete(like)
 
-        meme = post.meme
+        matches = db_sess.query(Match).filter((Match.post_id == post_id) | (Match.new_post_id == post_id)).all()
+        for match in matches:
+            db_sess.delete(match)
 
-        if meme:
-            for path in [meme.source_path, meme.result_path]:
-                if path and os.path.exists(path):
-                    os.remove(path)
-
-            db_sess.delete(meme)
-
+        db_sess.delete(meme)
         db_sess.delete(post)
-
         db_sess.commit()
 
         return jsonify({'status': 'ok'})
 
 
-# ===
+# === My-API ===
 
 @app.route("/my-api/get-key")
 @login_required
@@ -562,7 +571,7 @@ def create_meme():
 @app.route('/meme/<int:meme_id>/upload', methods=['GET', 'POST'])
 @login_required
 def upload_meme(meme_id):
-    with (db_session.create_session() as db_sess):
+    with db_session.create_session() as db_sess:
         meme = db_sess.query(Meme).options(joinedload(Meme.user)).get(meme_id)
         if not meme:
             abort(404)
@@ -570,7 +579,10 @@ def upload_meme(meme_id):
         is_uploading_by_current_user = (meme.user_id == current_user.id)
         is_published = meme.post_id is not None
         is_editing = request.args.get('editing')
-        if not is_uploading_by_current_user or is_published and not is_editing:
+
+        matching_post_id = request.args.get('matching')
+
+        if not is_uploading_by_current_user or (is_published and not is_editing):
             abort(403)
 
         current_post = None
@@ -582,19 +594,29 @@ def upload_meme(meme_id):
             if is_editing and current_post:
                 current_post.title = form.title.data
                 current_post.description = form.descr.data
-                db_sess.merge(current_post)
             else:
                 post = Post(
                     user=db_sess.merge(current_user),
-                    meme=meme,
                     title=form.title.data,
-                    description=form.descr.data)
+                    description=form.descr.data
+                )
+                post.meme = meme
                 db_sess.add(post)
-            db_sess.commit()
+                db_sess.flush()
 
+                if matching_post_id:
+                    new_match = Match(
+                        author_id=db_sess.query(Post).filter(Post.id == matching_post_id).first().author_id,
+                        matchman_id=current_user.id,
+                        post_id=int(matching_post_id),
+                        new_post_id=post.id
+                    )
+                    db_sess.add(new_match)
+
+            db_sess.commit()
             return redirect('/')
 
-        if is_editing and request.method == 'GET':
+        if is_editing and current_post and request.method == 'GET':
             form.title.data = current_post.title
             form.descr.data = current_post.description
 
@@ -608,19 +630,15 @@ def upload_meme(meme_id):
         )
 
 
-# === Posts ===
-
 @app.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @current_user_only(Post, url_param='post_id')
 def edit_post(post_id):
     with db_session.create_session() as db_sess:
         post = db_sess.get(Post, post_id)
-        if not post:
+        if not post or not post.meme:
             abort(404)
 
         meme = post.meme
-        if not meme:
-            abort(404)
 
         form = forms.meme.EditingForm()
         if form.validate_on_submit():
@@ -643,6 +661,58 @@ def edit_post(post_id):
                                page_title='Редактирование мема',
                                form=form,
                                meme=meme)
+
+
+@app.route('/post/<int:post_id>/match', methods=['GET', 'POST'])
+@login_required
+def make_match_with_post(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post or not post.meme:
+            abort(404)
+
+        original_meme = db_sess.query(Meme).filter(Meme.post_id == post_id).first()
+
+        form = forms.meme.EditingForm()
+        if form.validate_on_submit():
+            meme_meta = json.loads(request.form.get('meme_meta', '{}'))
+
+            meme = Meme(
+                meta=meme_meta,
+                user=current_user,
+                parent_meme_id=original_meme.id
+            )
+            db_sess.add(meme)
+            db_sess.flush()
+            meme_id = meme.id
+            user_id = meme.user_id
+
+            meme_result_data = request.form.get('meme_result')
+            if meme_result_data:
+                _, b64picture = meme_result_data.split(',', 1)
+                meme_result = base64.b64decode(b64picture)
+
+            _folderpath = os.path.join('static', 'uploads')
+            result_filepath = os.path.join(_folderpath, 'results', f'user{user_id}-meme{meme_id}.jpg')
+
+            source_filepath = original_meme.source_path
+
+            with open(result_filepath, 'wb') as result:
+                result.write(meme_result)
+
+            meme.source_path = source_filepath
+            meme.result_path = result_filepath
+
+            db_sess.commit()
+
+            return redirect(url_for('upload_meme', meme_id=meme_id, matching=post.id))
+
+        return render_template(
+            'meme_editor.html',
+            page_title='Создание мэтча',
+            title='1. Создание мэтча',
+            meme=original_meme,
+            form=form)
 
 
 def main():
