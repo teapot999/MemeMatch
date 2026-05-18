@@ -11,7 +11,9 @@
     {{ form.hidden_tag() }}
     <p>
         {{ meme_card(meme, current_user, post, is_editing=True) }}
-        <hr>
+        <div class="cat-hr-container">
+            <hr>
+        </div>
         <p>
             {{ form.title.label(class="text") }}<br>
             {{ form.title(class="form-control text", id="title-input") }}

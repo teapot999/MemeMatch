@@ -418,7 +418,8 @@ def register():
     if form.validate_on_submit():
         with db_session.create_session() as db_sess:
             if db_sess.query(User).filter(User.username == form.username.data).first():
-                return render_template('register.html', title='Регистрация',
+                return render_template('register.html',
+                                       title='Регистрация',
                                        form=form,
                                        message="Пользователь с таким юзернеймом уже есть")
 
@@ -502,7 +503,8 @@ def edit_profile():
     if form.validate_on_submit():
         with db_session.create_session() as db_sess:
             if db_sess.query(User).filter(User.username == form.username.data).first():
-                return render_template('edit_profile.html', title='Регистрация',
+                return render_template('edit_profile.html',
+                                       title='Регистрация',
                                        form=form,
                                        message="Этот юзернейм занят")
 
@@ -566,11 +568,9 @@ def create_meme():
 
             return redirect(url_for('upload_meme', meme_id=meme_id))
 
-    return render_template(
-        'meme_maker.html',
-        page_title='Создание мема',
-        title='1. Создание мема',
-        form=form)
+    return render_template('meme_maker.html',
+                           title='Создание мема',
+                           form=form)
 
 
 @app.route('/meme/<int:meme_id>/upload', methods=['GET', 'POST'])
@@ -627,8 +627,7 @@ def upload_meme(meme_id):
 
         return render_template(
             'meme_uploader.html',
-            page_title='Создание мема',
-            title='2. Выкладывание мема',
+            title='Выкладывание мема',
             form=form,
             meme=meme,
             post=current_post,
@@ -662,8 +661,7 @@ def edit_post(post_id):
             return redirect(url_for('upload_meme', meme_id=meme.id, editing=True))
 
         return render_template('meme_editor.html',
-                               title='1. Редактирование мема',
-                               page_title='Редактирование мема',
+                               title='Редактирование мема',
                                form=form,
                                meme=meme)
 
@@ -714,8 +712,7 @@ def make_match_with_post(post_id):
 
         return render_template(
             'meme_editor.html',
-            page_title='Создание мэтча',
-            title='1. Создание мэтча',
+            title='Создание мэтча',
             meme=original_meme,
             form=form)
 

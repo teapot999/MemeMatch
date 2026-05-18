@@ -10,6 +10,7 @@
     transition: opacity 0.5s ease, transform 0.5s ease, max-height 0.5s ease, margin 0.5s ease, padding 0.5s ease;
     opacity: 1;
     transform: scale(1);
+    border-radius: 5px;
 }
 
 .meme-card.fade-out {
@@ -93,6 +94,7 @@
     flex-direction: column;
     align-items: center;
     padding: 2px;
+    border-radius: 3px;
 }
 
 .meme-content img.meme {

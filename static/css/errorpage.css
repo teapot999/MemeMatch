@@ -1,11 +1,11 @@
 .error-page {
     display: flex;
     align-content: center;
-    margin: auto;
     align-items: center;
     text-align: center;
     flex-direction: column;
     gap: 10px;
+    margin: 80px auto auto;
 }
 
 .error-page .warn {
@@ -15,11 +15,11 @@
     align-items: center;
     width: 100%;
     padding: 5px;
-    border-radius: 3px;
+    border-radius: 7px;
 }
 
 .error-page img {
     width: 100%;
     height: auto;
-    border-radius: 3px;
+    border-radius: 5px;
 }

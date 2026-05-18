@@ -16,7 +16,9 @@
             <a class="btn btn-light" href="/profile/edit">Изменить</a>
         {% endif %}
     </div>
-    <hr>
+    <div class="cat-hr-container">
+            <hr>
+        </div>
     {% if posts %}
         <h3 id="memes-by">{% if is_owner %}Мои мемы{% else %}Мемы {{ user.nickname }}{% endif %}</h3>
     {% for post in posts %}

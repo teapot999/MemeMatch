@@ -14,7 +14,9 @@
         {{ meme_card(post.meme, current_user, post) }}
         <br id="sep-{{ post.id }}">
     {% endfor %}
-    <hr>
+    <div class="cat-hr-container">
+            <hr>
+    </div>
     <h3>Мемы закончились =(</h3>
     {% if current_user.is_authenticated %}
         <a class="btn btn-light" href="/meme/create">Создать новый мем</a>

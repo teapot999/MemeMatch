@@ -49,3 +49,34 @@
     height: auto;
     border-radius: 3px;
 }
+
+.cat-hr-container {
+    position: relative;
+    width: 100%;
+    margin: 3rem 0;
+}
+
+.cat-hr-container hr {
+    border: none;
+    height: 2px;
+    background-color: #6c757d;
+    opacity: 0.4;
+    margin: 0;
+}
+
+.cat-hr-container img.hr-cat {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: -42px;
+    width: auto;
+    height: 42px;
+    object-fit: contain;
+    transition: transform 0.2s ease-in-out;
+    pointer-events: none;
+    z-index: 1001;
+}
+
+.cat-hr-container:hover img.hr-cat, img.hr-cat:hover {
+    transform: translateX(-50%) translateY(-4px);
+}

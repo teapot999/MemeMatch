@@ -1,7 +1,4 @@
 <!doctype html>
-{% if not page_title %}
-    {% set page_title = title %}
-{% endif %}
 <html lang="ru">
 <head>
     <meta charset="utf-8">
@@ -11,24 +8,49 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/default.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/classes.css') }}"/>
     {% block css %}{% endblock %}
-    <title>MemeMatch{% if page_title %}: {{ page_title }}{% endif %}</title>
+    <title>MemeMatch{% if title %}: {{ title }}{% endif %}</title>
 </head>
 <body>
 <header>
-    <nav class="navbar navbar-light bg-light">
-        <a class="navbar-brand" href="/">MemeMatch</a>
-        <a class="navbar-brand" href="" style="margin-left: 5%">{% if title %}{{ title }}{% else %}Главная{% endif %}</a>
-        <div class="d-flex align-items-center">
-        {% if current_user.is_authenticated %}
-            <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little" style="margin-right: 10px">
-            <a class="navbar-brand" href="/profile">{{ current_user.nickname }}</a>
-            <a class="btn btn-danger" href="/logout">Выйти</a>
-        {% else %}
-            <p>
-                <a class="btn btn-primary" href="/register">Зарегистрироваться</a>
-                <a class="btn btn-success" href="/login">Войти</a>
-            </p>
-        {% endif %}
+    <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top site-header">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">MemeMatch:</a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse w-100 d-flex justify-content-between align-items-center" id="navbarNavDropdown">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="navbar-brand nav-link active" href="" style="margin-left: 7%">{% if title %}{{ title }}{% else %}Главная{% endif %}</a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item dropdown d-flex align-items-center">
+                                <a class="nav-link dropdown-toggle d-inline-block p-0 align-middle text-dark" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {{ current_user.nickname }}
+                                </a>
+                                <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little me-2" style="margin-left: 15px;">
+
+                        <ul class="dropdown-menu dropdown-menu-right bg-light border-secondary" aria-labelledby="navbarDropdownMenuLink">
+                            <li><a class="dropdown-menu-item dropdown-item text-black-50" href="/profile/{{ current_user.username }}">👤 Мой профиль</a></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-success" href="/meme/create">➕ Создать мем</a></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-info" href="/my-api">🔑 Золотой API-Ключик</a></li>
+                            <li><hr class="dropdown-divider border-secondary"></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-danger" href="/logout">🚪 Выйти</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="btn btn-outline-primary" href="/register">Зарегистрироваться</a>
+                        <a class="btn btn-outline-success" href="/login">Войти</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
         </div>
     </nav>
 </header>
@@ -36,6 +58,26 @@
 <main role="main" class="container">
     {% block content %}{% endblock %}
 </main>
+
+<script src="{{ url_for('static', filename='scripts/bootstrap.bundle.min.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const totalCats = 5;
+    const hrContainers = document.querySelectorAll('.cat-hr-container');
+
+    hrContainers.forEach(container => {
+        const randomCatId = Math.floor(Math.random() * totalCats) + 1;
+
+        const catImg = document.createElement('img');
+
+        catImg.src = `/static/img/cats/cat-${randomCatId}.png`;
+        catImg.classList.add('hr-cat');
+        catImg.alt = 'cat';
+
+        container.appendChild(catImg);
+    });
+});
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
