@@ -423,6 +423,16 @@ def index():
         return render_template('index.html', posts=posts)
 
 
+@app.route('/healthcheck')
+def healthcheck():
+    return 'Hello Render!'
+
+
+@app.route('/github')
+def github():
+    return redirect('https://github.com/teapot999/MemeMatch')
+
+
 # === Register and login ===
 
 @app.route('/register', methods=['GET', 'POST'])
