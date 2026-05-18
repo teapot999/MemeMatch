@@ -36,6 +36,22 @@ app.json.ensure_ascii = False
 
 csrf = CSRFProtect(app)
 
+db_path = os.getenv('DATABASE_PATH')
+if not db_path:
+    db_dir = os.path.join(app.root_path, 'db')
+    os.makedirs(db_dir, exist_ok=True)
+    db_path = os.path.join(db_dir, 'blogs.db')
+
+db_session.global_init(db_path, debug=False)
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    with db_session.create_session() as db_sess:
+        return db_sess.get(User, user_id)
+
 
 # === Error handler ===
 
@@ -773,22 +789,8 @@ def block_author(user_id):
         return redirect('/')
 
 
-def main():
-    db_session.global_init(os.getenv('DATABASE_PATH'), debug=False)
-
-    login_manager = LoginManager()
-    login_manager.init_app(app)
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        with db_session.create_session() as db_sess:
-            return db_sess.get(User, user_id)
-
+if __name__ == '__main__':
     host = '0.0.0.0' if os.getenv('HOST') else '127.0.0.1'
     port = int(os.getenv('PORT', 5000))
 
     app.run(host=host, port=port)
-
-
-if __name__ == '__main__':
-    main()
