@@ -4,6 +4,7 @@ import mimetypes
 import os
 from datetime import timedelta
 
+import requests
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory, jsonify, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -19,7 +20,7 @@ from data.matches import Match
 from data.memes import Meme
 from data.posts import Post
 from data.users import User
-from wrappers import current_user_only, api_only, api_or_login
+from wrappers import current_user_only, api_only, api_or_login, admin_only
 
 load_dotenv()
 
@@ -728,6 +729,44 @@ def make_match_with_post(post_id):
             title='Создание мэтча',
             meme=original_meme,
             form=form)
+
+
+# === Teapot functions ===
+
+@app.route('/user/<int:user_id>/block')
+@admin_only
+def block_author(user_id):
+    with db_session.create_session() as db_sess:
+        user = db_sess.get(User, user_id)
+        if not user:
+            abort(404)
+
+        for post in user.posts:
+            meme = post.meme
+            if meme.source_path:
+                source_usage_count = db_sess.query(Meme).filter(Meme.source_path == meme.source_path).count()
+                if source_usage_count <= 1 and os.path.exists(meme.source_path):
+                    os.remove(meme.source_path)
+            if meme.result_path:
+                if os.path.exists(meme.result_path):
+                    os.remove(meme.result_path)
+            db_sess.delete(meme)
+
+            likes = db_sess.query(Like).filter(Like.post_id == post.id).all()
+            for like in likes:
+                db_sess.delete(like)
+
+            matches = db_sess.query(Match).filter((Match.post_id == post.id) | (Match.new_post_id == post.id)).all()
+            for match in matches:
+                db_sess.delete(match)
+
+            db_sess.delete(post)
+
+        db_sess.delete(user)
+
+        db_sess.commit()
+
+        return redirect('/')
 
 
 def main():

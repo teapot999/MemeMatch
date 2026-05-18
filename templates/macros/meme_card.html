@@ -20,7 +20,7 @@
             {% if user.id == 1 %}
             <a class="btn btn-warning" href="/post/{{ post.id }}/edit">📝</a>
             {% else %}
-            <a class="btn btn-dark" href="/post/{{ post.id }}/block-author">🚫</a>
+            <a class="btn btn-dark" href="/user/{{ user.id }}/block">🚫</a>
             {% endif %}
             <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}" type="button">🗑️️</button>
         {% elif auth and user and user.id == current_user.id %}
