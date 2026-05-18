@@ -184,7 +184,7 @@ def get_entities_list_api(entity_type):
 
 
 @app.route('/api/<entity_type>/<int:entity_id>')
-@api_only
+@api_or_login
 @csrf.exempt
 def get_entity_api(entity_type, entity_id):
     with db_session.create_session() as db_sess:
@@ -208,13 +208,26 @@ def get_entity_api(entity_type, entity_id):
                 if not obj:
                     return jsonify({'status': 'error', 'message': f'The {entity_type} №{entity_id} is a lie'}), 404
 
-                params = ['id', 'title', 'description', 'created_date', 'author_id',
-                          'matches_from_this', 'match_result']
+                params = ['id', 'title', 'description', 'created_date', 'author_id']
 
                 post_likes = db_sess.scalars(
                     select(Like.user_id).filter(Like.post_id == entity_id).order_by(Like.user_id)).all()
+
                 post_meme_id = obj.meme.id if obj.meme else None
-                additional = {'likes': post_likes, 'meme_id': post_meme_id}
+
+                post_matches_from_this = db_sess.scalars(
+                    select(Match.new_post_id).filter(Match.post_id == entity_id)
+                ).all()
+
+                parent_match = db_sess.query(Match).filter(Match.new_post_id == entity_id).first()
+                post_match_result_id = parent_match.post_id if parent_match else None
+
+                additional = {
+                    'likes': post_likes,
+                    'meme_id': post_meme_id,
+                    'matches_from_this': post_matches_from_this,
+                    'match_result': post_match_result_id
+                }
             case _:
                 return jsonify({'status': 'error',
                                 'message': f'Unknown entity type: {entity_type}. Allowed types: user, post, meme.'}), 400
