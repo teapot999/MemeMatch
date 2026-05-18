@@ -31,6 +31,7 @@ app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=60)
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SECURE'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60 * 60 * 24 * 7
+app.jinja_env.globals['Post'] = Post
 app.json.ensure_ascii = False
 
 csrf = CSRFProtect(app)
@@ -471,7 +472,10 @@ def logout():
 @app.route('/profile')
 @login_required
 def profile():
-    return render_template('profile.html', title='Профиль', user=current_user, is_owner=True)
+    with db_session.create_session() as db_sess:
+        user = db_sess.query(User).filter(User.id == current_user.id).first()
+        posts = db_sess.query(Post).filter(Post.author_id == user.id).order_by(Post.created_date.desc()).all()
+        return render_template('profile.html', title='Профиль', user=user, is_owner=True, posts=posts)
 
 
 @app.route('/profile/<int:user_id>')
@@ -486,8 +490,9 @@ def someones_profile(user_id):
             abort(404)
 
         is_owner = current_user.is_authenticated and user.id == current_user.id
+        posts = db_sess.query(Post).filter(Post.author_id == user.id).order_by(Post.created_date.desc()).all()
 
-        return render_template('profile.html', title='Профиль', user=user, is_owner=is_owner)
+        return render_template('profile.html', title='Профиль', user=user, is_owner=is_owner, posts=posts)
 
 
 @app.route('/profile/edit', methods=['GET', 'POST'])

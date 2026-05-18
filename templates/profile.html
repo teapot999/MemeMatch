@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% from "macros/meme_card.html" import meme_card %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/memefeed.css') }}"/>
+{% endblock %}
+
 {% block content %}
 <div class="container memefeed">
     <div class="container">
@@ -11,16 +17,104 @@
         {% endif %}
     </div>
     <hr>
-<!--    <div class="border rounded" style="margin-top: 20px">-->
-<!--        <h3 class="heading-text">Мои мемы</h3>-->
-<!--        {/% for meme in memes %}-->
-<!--            <div class="border rounded">-->
-<!--                <img src="{/{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-little">{/{ meme.user.name }}-->
-<!--                <p class="heading-text">{/{ meme.title }}</p>-->
-<!--                <img src="{/{ url_for('user_memes', user_id=user.id) }}" alt="">-->
-<!--        </div>-->
-<!--    </div>-->
+    {% if posts %}
+        <h3 id="memes-by">{% if is_owner %}Мои мемы{% else %}Мемы {{ user.nickname }}{% endif %}</h3>
+    {% for post in posts %}
+        {{ meme_card(post.meme, current_user, post) }}
+        <br id="sep-{{ post.id }}">
+    {% endfor %}
+    {% endif %}
     <hr>
-        <a class="btn btn-dark" href="/my-api/get-key/force-trying">Получить Золотой API-Ключик</a>
+    <a class="btn btn-dark" href="/my-api/get-key/force-trying">Получить Золотой API-Ключик</a>
+    <hr>
+    ~MemeMatch~
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    document.querySelectorAll('.like-btn').forEach(button => {
+        button.addEventListener('click', async function (e) {
+            e.preventDefault();
+
+            const postId = this.getAttribute('data-post-id');
+            const likesCountSpan = document.querySelector(`.likes-count-val-${postId}`);
+
+            try {
+                const response = await fetch(`/api/post/${postId}/like`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    }
+                });
+                if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
+
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    if (likesCountSpan) {
+                        likesCountSpan.textContent = data.likes_count;
+                    }
+
+                    const post = document.getElementById(`post-${postId}`);
+
+                    post.classList.add('like-pulse-active');
+
+                    setTimeout(() => {
+                        post.classList.remove('like-pulse-active');
+                    }, 350);
+
+                    if (data.action === 'liked') {
+                        this.classList.remove('btn-outline-danger');
+                        this.classList.add('btn-danger');
+                    } else {
+                        this.classList.remove('btn-danger');
+                        this.classList.add('btn-outline-danger');
+                    }
+                }
+            } catch (error) {
+                console.error(`Error liking post ${postId}:`, error);
+            }
+        });
+    });
+    document.querySelectorAll('.del-btn').forEach(button => {
+        button.addEventListener('click', async function (e) {
+            e.preventDefault();
+
+            const postId = this.getAttribute('data-post-id');
+            try {
+                const response = await fetch(`/api/post/${postId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    }
+                });
+                if (!response.ok) throw new Error(`Server error: ${response.status} ${response.statusText}`);
+
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    const post = document.getElementById(`post-${postId}`);
+                    post.classList.add('fade-out');
+                    setTimeout(() => {
+                        post.remove();
+                    }, 500);
+
+                    document.getElementById(`sep-${postId}`).remove();
+
+                    const posts = document.getElementsByClassName('meme-card');
+                    if (posts.length <= 1) {
+                        document.getElementById('memes-by').remove();
+                    }
+                }
+            } catch (error) {
+                console.error(`Error deleting post ${postId}:`, error);
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
