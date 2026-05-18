@@ -3,3 +3,8 @@
 .env
 alembic.ini
 alembic
+__pycache__/
+*.db
+instance/
+static/uploads/results/*
+static/uploads/sources/*

@@ -1,6 +1,7 @@
 flask
 flask-login
 flask-wtf
+gunicorn
 python-dotenv
 sqlalchemy
 sqlalchemy-serializer

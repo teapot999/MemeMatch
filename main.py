@@ -4,7 +4,6 @@ import mimetypes
 import os
 from datetime import timedelta
 
-import requests
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, abort, request, url_for, send_from_directory, jsonify, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
