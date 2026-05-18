@@ -425,12 +425,7 @@ def index():
 
 @app.route('/healthcheck')
 def healthcheck():
-    return 'Hello Render!'
-
-
-@app.route('/github')
-def github():
-    return redirect('https://github.com/teapot999/MemeMatch')
+    return 'Hello Server!'
 
 
 # === Register and login ===
