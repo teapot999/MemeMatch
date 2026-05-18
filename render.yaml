@@ -1,11 +1,13 @@
 services:
   - type: web
-    name: memematch-app
+    name: memematch
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn main:app
     envVars:
       - key: SECRET_KEY
-        generateValue: true # Render сам сгенерирует надежный секретный ключ
+        generateValue: true
       - key: ADMIN_ID
-        value: "1" # ID твоего админа-чайника
+        value: "1"
+      - key: DATABASE_PATH
+        value: "db/table.db"
