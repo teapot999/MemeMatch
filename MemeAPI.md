@@ -122,6 +122,8 @@ response = requests.get(url, headers=headers)
 
 ![Пример ответа](/static/avatars/user1.jpg)
 
+### Сущность типа `post`
+
 Представляет собой пост (публикацию), размещённую в MemeMatch. Отдаёт поля:
 
 | Поле                | Тип            | Описание                                                         |
