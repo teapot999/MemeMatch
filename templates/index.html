@@ -17,14 +17,16 @@
     </div>
     {% endfor %}
     <div class="text-center my-4">
-        <button type="button" id="load-more-btn" class="btn btn-outline-warning">Мне нужно БОЛЬШЕ мемов!</button>
+        <button type="button" id="load-more-btn" class="btn btn-outline-warning">
+            <i class="bi bi-file-earmark-plus-fill"></i> Мне нужно БОЛЬШЕ мемов!
+        </button>
     </div>
     <div class="cat-hr-container">
             <hr>
     </div>
     <h3 id="end-feed-msg" style="display: none">Мемы закончились =(</h3>
     {% if current_user.is_authenticated %}
-        <a class="btn btn-light" href="/meme/create">Создать новый мем</a>
+        <a class="btn btn-light" href="/meme/create"><i class="bi bi-pencil-fill"></i> Создать новый мем</a>
     {% endif %}
     <hr>
     ~MemeMatch~
@@ -71,9 +73,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.action === 'liked') {
                         this.classList.remove('btn-outline-danger');
                         this.classList.add('btn-danger');
+                        const icon = document.getElementById(`like-icon-post-${postId}`);
+                        icon.classList.remove('bi-heart-fill');
+                        icon.classList.add('bi-heart');
                     } else {
                         this.classList.remove('btn-danger');
                         this.classList.add('btn-outline-danger');
+                        const icon = document.getElementById(`like-icon-post-${postId}`);
+                        icon.classList.remove('bi-heart');
+                        icon.classList.add('bi-heart-fill');
                     }
                 }
             } catch (error) {

@@ -4,9 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/bootstrap.min.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/default.css') }}"/>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/classes.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='icons/bootstrap-icons.css') }}"/>
     {% block css %}{% endblock %}
     <title>MemeMatch{% if title %}: {{ title }}{% endif %}</title>
 </head>
@@ -32,11 +33,11 @@
                                 <img src="{{ url_for('user_avatar', user_id=current_user.id) }}" alt="" class="avatar-little me-2" style="margin-left: 15px;">
 
                         <ul class="dropdown-menu dropdown-menu-right bg-light border-secondary" aria-labelledby="navbarDropdownMenuLink">
-                            <li><a class="dropdown-menu-item dropdown-item text-black-50" href="/profile/{{ current_user.username }}">👤 Мой профиль</a></li>
-                            <li><a class="dropdown-menu-item dropdown-item text-success" href="/meme/create">➕ Создать мем</a></li>
-                            <li><a class="dropdown-menu-item dropdown-item text-info" href="/my-api/get-key/force-trying">🔑 Золотой API-Ключик</a></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-black-50" href="/profile/{{ current_user.username }}"><i class="bi bi-person-fill"></i> Мой профиль</a></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-success" href="/meme/create"><i class="be bi-cloud-upload-fill"></i> Создать мем</a></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-info" href="/my-api/get-key/force-trying"><i class="bi bi-key-fill"></i> Золотой API-Ключик</a></li>
                             <li><hr class="dropdown-divider border-secondary"></li>
-                            <li><a class="dropdown-menu-item dropdown-item text-danger" href="/logout">🚪 Выйти</a></li>
+                            <li><a class="dropdown-menu-item dropdown-item text-danger" href="/logout"><i class="bi bi-door-open-fill"></i> Выйти</a></li>
                         </ul>
                     </li>
                     {% else %}

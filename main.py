@@ -132,8 +132,10 @@ def meme_picture(meme_id):
         match request.args.get('type', 'result'):
             case 'source':
                 meme_path = meme.source_path
+                download_filename = f"MemeMatch-post-{meme_id}-source.jpg"
             case 'result':
                 meme_path = meme.result_path
+                download_filename = f"MemeMatch-post-{meme_id}.jpg"
             case _:
                 abort(400)
 
@@ -162,7 +164,6 @@ def meme_picture(meme_id):
         response.set_etag(f"meme-{meme_id}-{mtime}")
 
         if request.args.get('download'):
-            download_filename = f"MemeMatch-post-{meme_id}.jpg"
             response.headers['Content-Disposition'] = f'attachment; filename="{download_filename}"'
 
         return response.make_conditional(request)

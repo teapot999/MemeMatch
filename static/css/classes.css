@@ -80,3 +80,30 @@
 .cat-hr-container:hover img.hr-cat, img.hr-cat:hover {
     transform: translateX(-50%) translateY(-4px);
 }
+
+.with-tip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.with-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: 125%;
+    left: -100%;
+    z-index: 10000;
+    background-color: #eee;
+    color: #222;
+    padding: 5px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s;
+}
+
+.with-tip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}

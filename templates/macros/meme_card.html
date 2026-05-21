@@ -1,6 +1,6 @@
 {% macro meme_card(meme, current_user, post=None, is_editing=False) %}
 <div {% if post %} id="post-{{ post.id }}" {% endif %} class="border meme-card">
-    {% set user, auth, is_admin = meme.user, current_user.is_authenticated, current_user.is_authenticated and current_user.id == 1 %}
+    {% set user, auth, is_admin, is_liked = meme.user, current_user.is_authenticated, current_user.is_authenticated and current_user.id == 1, current_user.id not in post.likes|map(attribute='user_id') %}
     <div class="memeheader">
         <div class="from-user">
             <img src="{{ url_for('user_avatar', user_id=user.id) }}" alt="" class="avatar-little" loading="lazy">
@@ -18,17 +18,21 @@
         {% if post and not is_editing %}
         {% if is_admin %}
             {% if user.id == 1 %}
-            <a class="btn btn-warning" href="/post/{{ post.id }}/edit">📝</a>
+            <a class="btn btn-warning with-tip" href="/post/{{ post.id }}/edit" data-tip="Редактировать мем :р"><i class="bi bi-pencil-fill"></i></a>
             {% else %}
-            <a class="btn btn-dark" href="/user/{{ user.id }}/block">🚫</a>
+            <a class="btn btn-dark with-tip" href="/user/{{ user.id }}/block" data-tip="Забанить пользователя >:)"><i class="bi bi-ban"></i></a>
             {% endif %}
-            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}" type="button">🗑️️</button>
+            <button class="btn btn-danger del-btn with-tip" data-post-id="{{ post.id }}" type="button" data-tip="Удалить мем =("><i class="bi bi-trash3-fill"></i></button>
         {% elif auth and user and user.id == current_user.id %}
-            <a class="btn btn-warning" href="/post/{{ post.id }}/edit">📝</a>
-            <button class="btn btn-danger del-btn" data-post-id="{{ post.id }}" type="button">🗑️</button>
+            <a class="btn btn-warning with-tip" href="/post/{{ post.id }}/edit" data-tip="Редактировать мем :р"><i class="bi bi-pencil-fill"></i></a>
+            <button class="btn btn-danger del-btn with-tip" data-post-id="{{ post.id }}" type="button" data-tip="Удалить мем =("><i class="bi bi-trash3-fill"></i></button>
         {% endif %}
-        <a class="btn btn-outline-warning"
-           href="{{ url_for('meme_picture', meme_id=meme.id, download=True) }}">⏬</a>
+        <a class="btn btn-outline-warning with-tip"
+           href="{{ url_for('meme_picture', meme_id=meme.id, type='result', download=True) }}"
+           data-tip="Сохранить мем"><i class="bi bi-cloud-download-fill"></i></a>
+        <a class="btn btn-outline-warning with-tip"
+           href="{{ url_for('meme_picture', meme_id=meme.id, type='source', download=True) }}"
+           data-tip="Сохранить исходник мема"><i class="bi bi-file-earmark-arrow-down-fill"></i></a>
         {% endif %}
         </div>
         <div class="border meme-content">
@@ -39,19 +43,22 @@
         </div>
         <div class="control-buttons column">
             {% if post and not is_editing %}
-            <button class="btn btn-{% if post and current_user.id not in post.likes|map(attribute='user_id') %}outline-{% endif %}danger like-btn"
-                    data-post-id="{{ post.id if post else '' }}" type="button">❤️</button>
-            <a class="btn btn-success" href="/post/{{ post.id }}/match">🔀</a>
+            <button class="btn btn-{% if is_liked %}outline-{% endif %}danger like-btn"
+                    type="button"
+                    data-post-id="{{ post.id }}">
+                <i class="bi bi-heart{% if is_liked %}-fill{% endif %}" id="like-icon-post-{{ post.id }}"></i>
+            </button>
+            <a class="btn btn-primary with-tip" href="/post/{{ post.id }}/match" data-tip="Сделать мэтч :р"><i class="bi bi-shuffle"></i></a>
             {% endif %}
         </div>
     </div>
     <div class="memefooter">
         <div class="memestat">
             <div class="stat-item">
-                <p><span class="likes-count-val-{{ post.id }}">{{ post.likes|length }}</span> ❤️</p>
+                <p><span class="likes-count-val-{{ post.id }}">{{ post.likes|length }}</span> <i class="bi bi-heart-fill" style="color: #dc3545"></i></p>
             </div>
             <div class="stat-item">
-                <p><span class="matches-count-val-{{ post.id }}">{{ post.matches_from_this|length }}</span> 🔄️</p>
+                <p><span class="matches-count-val-{{ post.id }}">{{ post.matches_from_this|length }}</span> <i class="bi bi-shuffle" style="color: #007bff"></i></p>
             </div>
         </div>
         <div class="create-date">
