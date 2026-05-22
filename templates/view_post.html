@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% from "macros/meme_card.html" import meme_card %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/memefeed.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="container memefeed">
+    <h1>Оригинал поста {{ original_post.user.nickname }} от мэтча {{ matched_post.match_result.matchman.nickname }}</h1>
+    <hr>
+    {{ meme_card(original_post.meme, current_user, original_post, is_viewing=True) }}
+    <div class="cat-hr-container">
+        <hr>
+    </div>
+    <a class="btn btn-light" href="/"><i class="bi bi-arrow-bar-left"></i> Обратно к ленте мемов</a>
+    {% if current_user.is_authenticated %}
+    <a class="btn btn-light" href="/meme/create"><i class="bi bi-pencil-fill"></i> Создать новый мем</a>
+    {% endif %}
+    <hr>
+    ~MemeMatch~
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='scripts/post_buttons.js') }}"></script>
+{% endblock %}

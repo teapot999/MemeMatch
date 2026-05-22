@@ -47,6 +47,7 @@ db_session.global_init(db_path, debug=False)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+
 @login_manager.user_loader
 def load_user(user_id):
     with db_session.create_session() as db_sess:
@@ -506,6 +507,7 @@ def logout():
 # === Profile ===
 
 @app.route('/profile')
+@app.route('/user')
 @login_required
 def profile():
     with db_session.create_session() as db_sess:
@@ -516,6 +518,8 @@ def profile():
 
 @app.route('/profile/<int:user_id>')
 @app.route('/profile/<user_id>')
+@app.route('/user/<int:user_id>')
+@app.route('/user/<user_id>')
 def someones_profile(user_id):
     with db_session.create_session() as db_sess:
         if isinstance(user_id, int):
@@ -669,6 +673,29 @@ def upload_meme(meme_id):
         )
 
 
+@app.route('/post/<int:post_id>')
+def show_post(post_id):
+    with db_session.create_session() as db_sess:
+        post = db_sess.get(Post, post_id)
+        if not post:
+            abort(404)
+
+        return render_template('view_post.html', post=post)
+
+
+@app.route('/post/<int:post_id>/match-from/<int:matched_post_id>')
+def show_match_from_post(post_id, matched_post_id):
+    with db_session.create_session() as db_sess:
+        original_post = db_sess.get(Post, post_id)
+        if not original_post or not original_post.matches_from_this:
+            abort(404)
+        matched_post = db_sess.get(Post, matched_post_id)
+        if not matched_post or not matched_post.match_result:
+            abort(404)
+
+        return render_template('view_post.html', original_post=original_post, matched_post=matched_post)
+
+
 @app.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @current_user_only(Post, url_param='post_id')
 def edit_post(post_id):
@@ -757,6 +784,8 @@ def make_match_with_post(post_id):
 @app.route('/user/<int:user_id>/block')
 @admin_only
 def block_author(user_id):
+    if user_id == os.getenv('ADMIN_ID'):
+        abort(400)
     with db_session.create_session() as db_sess:
         user = db_sess.get(User, user_id)
         if not user:
