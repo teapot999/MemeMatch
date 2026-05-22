@@ -78,10 +78,12 @@ def api_or_login(func):
             return func(*args, **kwargs)
 
         api_key = request.headers.get('X-Api-Key')
-        if api_key:
+        api_owner = request.headers.get('X-Api-Owner')
+        if api_key and api_owner:
             hashed_api_key = hashlib.sha256(api_key.encode('utf-8')).hexdigest()
             with db_session.create_session() as db_sess:
-                user = db_sess.query(User).filter(User.hashed_api_key == hashed_api_key).first()
+                user = db_sess.query(User).filter(User.hashed_api_key == hashed_api_key,
+                                                  User.username == api_owner).first()
                 if user:
                     if is_rate_limited(user.id):
                         return jsonify({
@@ -94,7 +96,7 @@ def api_or_login(func):
 
         return jsonify({
             'status': 'error',
-            'message': 'Unauthorized. Provide a valid X-API-Key header or log in.'}), 401
+            'message': 'Unauthorized. Provide a valid X-API-Key and X-Api-Owner header or log in.'}), 401
 
     return wrapper
 
@@ -102,19 +104,26 @@ def api_or_login(func):
 def api_only(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        api_key = request.headers.get('X-API-Key')
+        api_key = request.headers.get('X-Api-Key')
         if not api_key:
             return jsonify({'status': 'error', 'message': 'Missing X-API-Key header'}), 401
+        api_owner = request.headers.get('X-Api-Owner')
+        if not api_owner:
+            return jsonify({'status': 'error', 'message': 'Missing X-Api-Owner header'}), 401
 
         hashed_api_key = hashlib.sha256(api_key.encode('utf-8')).hexdigest()
 
         with db_session.create_session() as db_sess:
-            user = db_sess.query(User).filter(User.hashed_api_key == hashed_api_key).first()
+            user = db_sess.query(User).filter(User.hashed_api_key == hashed_api_key,
+                                              User.username == api_owner).first()
             if not user:
-                return jsonify({'status': 'error', 'message': 'Invalid API Key'}), 401
+                return jsonify({'status': 'error', 'message': 'Invalid API Key or API Owner'}), 401
 
             if is_rate_limited(user.id):
-                return jsonify({'status': 'error', 'message': 'Too Many Requests'}), 429
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Too many requests. Limit is {MAX_REQUESTS} requests per {TIME_WINDOW} seconds.'
+                }), 429
 
             g.api_user = user
             return func(*args, **kwargs)

@@ -413,7 +413,7 @@ def generate_user_api_key():
         db_sess.merge(current_user)
         db_sess.commit()
 
-        return render_template('api_new_key.html', api_key=raw_api_key, title='Новый APi-ключ')
+        return render_template('api_new_key.html', api_key=raw_api_key, title='Новый API-ключ')
 
 
 @app.route("/my-api/get-key/force-trying")
