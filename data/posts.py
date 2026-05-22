@@ -17,7 +17,8 @@ class Post(SqlAlchemyBase, SerializerMixin):
 
     likes = orm.relationship('Like', back_populates='post')
     matches_from_this = orm.relationship('Match', back_populates='original_post', foreign_keys='[Match.post_id]')
-    match_result = orm.relationship('Match', back_populates='new_post', foreign_keys='[Match.new_post_id]', uselist=False)
+    match_result = orm.relationship('Match', back_populates='new_post', foreign_keys='[Match.new_post_id]',
+                                    uselist=False)
 
     author_id = sa.Column(sa.Integer, sa.ForeignKey('users.id'))
     user = orm.relationship('User', back_populates='posts')

@@ -96,7 +96,8 @@ def api_or_login(func):
 
         return jsonify({
             'status': 'error',
-            'message': 'Unauthorized. Provide a valid X-API-Key and X-Api-Owner header or log in.'}), 401
+            'message': 'Unauthorized. Provide a valid X-API-Key and X-Api-Owner header or log in.'
+        }), 401
 
     return wrapper
 

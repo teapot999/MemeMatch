@@ -457,7 +457,8 @@ def register():
                 return render_template('register.html',
                                        title='Регистрация',
                                        form=form,
-                                       message="Пользователь с таким юзернеймом уже есть")
+                                       message="Пользователь с таким юзернеймом уже есть"
+                                       )
 
             user = User(
                 nickname=form.nickname.data,
@@ -492,7 +493,8 @@ def login():
                 return redirect("/")
             return render_template('login.html',
                                    message="Неправильный логин или пароль",
-                                   form=form)
+                                   form=form
+                                   )
 
     return render_template('login.html', title='Авторизация', form=form)
 
@@ -545,7 +547,8 @@ def edit_profile():
                 return render_template('edit_profile.html',
                                        title='Регистрация',
                                        form=form,
-                                       message="Этот юзернейм занят")
+                                       message="Этот юзернейм занят"
+                                       )
 
             current_user.username = form.username.data or current_user.username
             current_user.about = form.about.data or current_user.about
@@ -607,9 +610,11 @@ def create_meme():
 
             return redirect(url_for('upload_meme', meme_id=meme_id))
 
-    return render_template('meme_maker.html',
-                           title='Создание мема',
-                           form=form)
+    return render_template(
+        'meme_maker.html',
+        title='Создание мема',
+        form=form
+    )
 
 
 @app.route('/meme/<int:meme_id>/upload', methods=['GET', 'POST'])
@@ -680,11 +685,11 @@ def show_post(post_id):
         if not post:
             abort(404)
 
-        return render_template('view_post.html', post=post)
+        return render_template('view_post.html', title='Просмотр поста', original_post=post)
 
 
 @app.route('/post/<int:post_id>/match-from/<int:matched_post_id>')
-def show_match_from_post(post_id, matched_post_id):
+def show_original_post(post_id, matched_post_id):
     with db_session.create_session() as db_sess:
         original_post = db_sess.get(Post, post_id)
         if not original_post or not original_post.matches_from_this:
@@ -693,7 +698,12 @@ def show_match_from_post(post_id, matched_post_id):
         if not matched_post or not matched_post.match_result:
             abort(404)
 
-        return render_template('view_post.html', original_post=original_post, matched_post=matched_post)
+        return render_template(
+            'view_post.html',
+            title='Просмотр оригинала',
+            original_post=original_post,
+            matched_post=matched_post
+        )
 
 
 @app.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
@@ -722,10 +732,12 @@ def edit_post(post_id):
 
             return redirect(url_for('upload_meme', meme_id=meme.id, editing=True))
 
-        return render_template('meme_editor.html',
-                               title='Редактирование мема',
-                               form=form,
-                               meme=meme)
+        return render_template(
+            'meme_editor.html',
+            title='Редактирование мема',
+            form=form,
+            meme=meme
+        )
 
 
 @app.route('/post/<int:post_id>/match', methods=['GET', 'POST'])
@@ -776,7 +788,8 @@ def make_match_with_post(post_id):
             'meme_editor.html',
             title='Создание мэтча',
             meme=original_meme,
-            form=form)
+            form=form
+        )
 
 
 # === Teapot functions ===

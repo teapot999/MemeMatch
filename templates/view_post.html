@@ -8,7 +8,11 @@
 
 {% block content %}
 <div class="container memefeed">
+    {% if matched_post %}
     <h1>Оригинал поста {{ original_post.user.nickname }} от мэтча {{ matched_post.match_result.matchman.nickname }}</h1>
+    {% else %}
+    <h1>Пост от {{original_post.user.nickname }}</h1>
+    {% endif %}
     <hr>
     {{ meme_card(original_post.meme, current_user, original_post, is_viewing=True) }}
     <div class="cat-hr-container">

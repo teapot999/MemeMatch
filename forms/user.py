@@ -16,8 +16,12 @@ class RegisterForm(FlaskForm):
         DataRequired(),
         EqualTo('password')])
     nickname = StringField('Никнейм', validators=[
-        DataRequired(message='Имени не может не быть')])
-    about = TextAreaField('Немного о себе')
+        DataRequired(message='Имени не может не быть'),
+        Length(max=52)
+    ])
+    about = TextAreaField('Немного о себе', validators=[
+        Length(max=228),
+    ])
     picture = FileField('Загрузить пикчу', render_kw={'accept': 'image/*'}, validators=[
         FileAllowed(['png', 'jpg', 'jpeg'], message='Не вижу картинки с форматом JPEG, JPG или PNG')
     ])
@@ -47,7 +51,8 @@ class EditProfileForm(FlaskForm):
     ])
     password = PasswordField('Пароль')
     password_again = PasswordField('Повторите пароль', validators=[
-        EqualTo('password')])
+        EqualTo('password')
+    ])
     nickname = StringField('Никнейм')
     about = TextAreaField('Немного о себе')
     picture = FileField('Загрузить пикчу', render_kw={'accept': 'image/*'}, validators=[
