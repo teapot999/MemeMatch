@@ -30,7 +30,7 @@ def global_init(db_file, debug=False):
     print(f"Connecting to database: {conn_str}")
 
     engine = sa.create_engine(conn_str, echo=debug)
-    __factory = orm.sessionmaker(bind=engine)
+    __factory = orm.sessionmaker(bind=engine, expire_on_commit=False)
 
     from . import __all_models
 

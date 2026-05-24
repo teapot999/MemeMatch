@@ -6,9 +6,6 @@
 <form action="" method="post" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     <p>
-<!--        <p>-->
-<!--&lt;!&ndash;            <img src="{{ url_for('get_entity_picture_api', entity_type='meme', entity_id=meme.id, type='result') }}" alt="" id="picture">&ndash;&gt;-->
-<!--        </p>-->
         <img id="meme-source" src="{{ url_for('meme_picture', meme_id=meme.id, type='source') }}" alt="" style="display: none">
         <img id="meme-preview" src="{{ url_for('meme_picture', meme_id=meme.id, type='result') }}" alt="" class="meme" style="width: 50%">
         <input id="meme-source-input" type="hidden" name="meme_source">
